@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dumbbell, 
@@ -10,7 +8,6 @@ import {
   Plus, 
   CheckCircle2, 
   Circle,
-  Settings,
   Flame,
   User as UserIcon,
   LogOut,
@@ -35,7 +32,6 @@ const App: React.FC = () => {
   const fetchUserData = async () => {
     try {
       setLoading(true);
-      // Fetch Profile
       const { data: profileData } = await supabase
         .from('user_profiles')
         .select('*')
@@ -44,7 +40,6 @@ const App: React.FC = () => {
       
       setProfile(profileData);
 
-      // Fetch Habits
       const { data: habitsData } = await supabase
         .from('habits')
         .select('*')
@@ -62,23 +57,23 @@ const App: React.FC = () => {
     const habit = habits.find(h => h.id === id);
     if (!habit) return;
 
-    // Local update for UI snappiness
     setHabits(prev => prev.map(h => 
       h.id === id ? { ...h, completed: !h.completed } : h
     ));
 
-    // Persist to Supabase
     const today = new Date().toISOString().split('T')[0];
     if (!habit.completed) {
       await supabase.from('habit_completions').insert({
         habit_id: id,
-        completed_at: today
+        completed_at: today,
+        user_id: user?.id
       });
     } else {
       await supabase.from('habit_completions')
         .delete()
         .eq('habit_id', id)
-        .eq('completed_at', today);
+        .eq('completed_at', today)
+        .eq('user_id', user?.id);
     }
   };
 
@@ -96,7 +91,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans selection:bg-cyan-500/30">
-      {/* Dynamic Navigation */}
       <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-2 group">
           <div className="w-10 h-10 bg-cyan-500/10 rounded-xl flex items-center justify-center text-cyan-400 border border-cyan-500/20 group-hover:bg-cyan-500/20 transition-all">
@@ -120,7 +114,6 @@ const App: React.FC = () => {
       </nav>
 
       <main className="pt-28 pb-12 px-6 max-w-7xl mx-auto space-y-12">
-        {/* Profile Identity Section */}
         <section className="relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-[2.5rem] blur opacity-10 group-hover:opacity-20 transition duration-1000"></div>
           <div className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 backdrop-blur-sm">
@@ -156,7 +149,6 @@ const App: React.FC = () => {
           </div>
         </section>
 
-        {/* Habits Dashboard */}
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between px-2">
@@ -252,7 +244,6 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Floating Action Button */}
       <div className="fixed bottom-8 right-8">
         <button className="w-14 h-14 bg-white text-black rounded-2xl shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
           <Plus size={24} strokeWidth={3} />
