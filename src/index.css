@@ -1,3 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Estilos globales adicionales si son necesarios */
+@layer base {
+  body {
+    @apply bg-[#0a0a0c] text-white antialiased;
+  }
+}
