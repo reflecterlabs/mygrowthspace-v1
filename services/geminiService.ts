@@ -1,8 +1,14 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { MotivationTip, SuggestedCard, Habit } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Accede a la variable de entorno usando import.meta.env
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!API_KEY) {
+  throw new Error("La variable de entorno VITE_GEMINI_API_KEY no está configurada. Por favor, añádela a tu archivo .env");
+}
+
+const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 export const getDailyInspiration = async (userFocus: string): Promise<MotivationTip> => {
   const response = await ai.models.generateContent({
