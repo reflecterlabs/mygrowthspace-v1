@@ -100,18 +100,43 @@ const App: React.FC = () => {
   };
 
   const saveHabit = async (habitData: Partial<Habit>) => {
-    await supabase.from('habits').insert({
-      user_id: user?.id,
-      name: habitData.name,
-      category: habitData.category,
-      frequency: habitData.frequency || 'daily',
-      days_of_week: habitData.daysOfWeek || [0,1,2,3,4,5,6],
-      time_of_day: habitData.time,
-      start_date: new Date().toISOString().split('T')[0]
-    });
-    setSuggestions([]);
-    setIsModalOpen(false);
-    fetchUserData();
+    if (!habitData.name) return;
+
+    try {
+      // Check for an existing habit with same user and name to avoid duplicates
+      const { data: existing, error: selectErr } = await supabase
+        .from('habits')
+        .select('id')
+        .eq('user_id', user?.id)
+        .eq('name', habitData.name)
+        .maybeSingle();
+
+      if (selectErr) console.error('Error checking existing habit:', selectErr);
+
+      if (existing) {
+        // Already exists — just refresh UI
+        setSuggestions([]);
+        setIsModalOpen(false);
+        fetchUserData();
+        return;
+      }
+
+      await supabase.from('habits').insert({
+        user_id: user?.id,
+        name: habitData.name,
+        category: habitData.category,
+        frequency: habitData.frequency || 'daily',
+        days_of_week: habitData.daysOfWeek || [0,1,2,3,4,5,6],
+        time_of_day: habitData.time,
+        start_date: new Date().toISOString().split('T')[0]
+      });
+    } catch (err) {
+      console.error('Error saving habit:', err);
+    } finally {
+      setSuggestions([]);
+      setIsModalOpen(false);
+      fetchUserData();
+    }
   };
 
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
