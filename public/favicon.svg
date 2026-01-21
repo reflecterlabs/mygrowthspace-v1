@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32">
+  <defs>
+    <radialGradient id="atomCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0891b2;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  <!-- Central nucleus -->
+  <circle cx="50" cy="50" r="8" fill="url(#atomCore)" stroke="#ffffff" stroke-width="1"/>
+  
+  <!-- Electron orbits -->
+  <ellipse cx="50" cy="50" rx="28" ry="18" fill="none" stroke="#06b6d4" stroke-width="1.5" opacity="0.6"/>
+  <ellipse cx="50" cy="50" rx="28" ry="18" fill="none" stroke="#06b6d4" stroke-width="1.5" opacity="0.6" transform="rotate(60 50 50)"/>
+  <ellipse cx="50" cy="50" rx="28" ry="18" fill="none" stroke="#06b6d4" stroke-width="1.5" opacity="0.6" transform="rotate(120 50 50)"/>
+  
+  <!-- Electrons on orbits -->
+  <circle cx="78" cy="50" r="3" fill="#06b6d4"/>
+  <circle cx="39" cy="68.5" r="3" fill="#06b6d4"/>
+  <circle cx="39" cy="31.5" r="3" fill="#06b6d4"/>
+</svg>
