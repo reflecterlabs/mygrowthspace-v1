@@ -37,7 +37,6 @@ const Login: React.FC = () => {
                   },
                   radii: {
                     borderRadiusButton: '2rem',
-                    buttonPadding: '1rem',
                     inputBorderRadius: '1.5rem',
                   },
                 },
