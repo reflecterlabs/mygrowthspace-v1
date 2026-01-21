@@ -17,6 +17,7 @@ import Onboarding from './components/Onboarding';
 import HabitCard from './components/HabitCard';
 import AddHabitModal from './components/AddHabitModal';
 import InsightCard from './components/InsightCard';
+import DateCarousel from './components/DateCarousel';
 import { supabase } from './src/integrations/supabase/client';
 import { Habit, UserProfile } from './types';
 import { generateSuggestedCards } from './services/geminiService';
@@ -31,6 +32,7 @@ const App: React.FC = () => {
   const [quickLog, setQuickLog] = useState('');
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     if (user) {
@@ -233,10 +235,13 @@ const App: React.FC = () => {
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
-              <Calendar className="text-cyan-400" size={20} />
-              Current Stack
-            </h2>
+            <div className="space-y-4">
+              <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
+                <Calendar className="text-cyan-400" size={20} />
+                Current Stack
+              </h2>
+              <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
+            </div>
             <div className="grid gap-2">
               {habits.length === 0 ? (
                 <div className="p-12 border border-dashed border-white/10 rounded-[2.5rem] text-center text-slate-500">
@@ -244,7 +249,7 @@ const App: React.FC = () => {
                 </div>
               ) : (
                 habits.map(h => (
-                  <HabitCard key={h.id} habit={h} selectedDateStr={new Date().toISOString().split('T')[0]} onToggle={() => {}} onDelete={() => {}} onEdit={() => {}} />
+                  <HabitCard key={h.id} habit={h} selectedDateStr={selectedDate} onToggle={() => {}} onDelete={() => {}} onEdit={() => {}} />
                 ))
               )}
             </div>
