@@ -34,6 +34,8 @@ const App: React.FC = () => {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
+  const [isEditingStatement, setIsEditingStatement] = useState(false);
+  const [editingStatement, setEditingStatement] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -222,6 +224,24 @@ const App: React.FC = () => {
     console.log('Edit habit:', habit);
   };
 
+  const startEditStatement = () => {
+    setEditingStatement(profile?.identityStatement || '');
+    setIsEditingStatement(true);
+  };
+
+  const saveStatement = async () => {
+    if (!editingStatement.trim() || !profile) return;
+    try {
+      await supabase.from('user_profiles').update({
+        identity_statement: editingStatement
+      }).eq('user_id', user?.id);
+      setProfile({ ...profile, identityStatement: editingStatement });
+      setIsEditingStatement(false);
+    } catch (err) {
+      console.error('Error updating statement:', err);
+    }
+  };
+
   if (authLoading) return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
   if (!user) return <Login />;
   if (showOnboarding) return <Onboarding onComplete={handleOnboardingComplete} />;
@@ -229,18 +249,18 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-24">
       <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-cyan-500/10 rounded-xl flex items-center justify-center text-cyan-400 border border-cyan-500/20">
             <Dumbbell size={20} />
           </div>
-          <span className="font-black text-xl tracking-tighter uppercase italic">Protocol</span>
+          <span className="font-black text-lg tracking-tighter">My Growth Space</span>
         </div>
         <button onClick={() => signOut()} className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center hover:text-red-400 transition-all">
           <LogOut size={18} />
         </button>
       </nav>
 
-      <main className="pt-28 px-6 max-w-7xl mx-auto space-y-8">
+      <main className="pt-28 px-6 space-y-8">
         <section className="max-w-3xl mx-auto w-full space-y-6">
           <form onSubmit={handleQuickLog} className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
@@ -273,18 +293,54 @@ const App: React.FC = () => {
           </div>
         </section>
 
-        <div className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 flex flex-col md:flex-row gap-8 items-center">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
+        <div className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 flex flex-col md:flex-row gap-8 items-center max-w-3xl mx-auto w-full">
+          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center flex-shrink-0">
             <UserIcon size={40} className="text-white" />
           </div>
           <div className="flex-1 text-center md:text-left">
             <h1 className="text-3xl font-black text-white">{profile?.name}</h1>
-            <p className="text-slate-400 italic mt-1">{profile?.identityStatement}</p>
+            {isEditingStatement ? (
+              <div className="mt-4 space-y-3">
+                <textarea
+                  value={editingStatement}
+                  onChange={(e) => setEditingStatement(e.target.value)}
+                  maxLength={264}
+                  className="w-full bg-white/5 border border-white/20 rounded-2xl p-4 text-white text-sm outline-none focus:border-cyan-500 resize-none font-medium"
+                  rows={3}
+                  placeholder="Your 264-character identity statement..."
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-500 font-black uppercase">{editingStatement.length}/264</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditingStatement(false)}
+                      className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-black text-slate-400 hover:text-white transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={saveStatement}
+                      className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/50 rounded-xl text-sm font-black text-cyan-400 hover:bg-cyan-500/30 transition-all"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={startEditStatement}
+                className="text-slate-400 italic mt-1 hover:text-cyan-400 transition-colors text-sm group"
+              >
+                {profile?.identityStatement}
+                <span className="block text-[10px] font-black uppercase text-slate-600 group-hover:text-cyan-500 mt-2">Click to edit</span>
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="max-w-3xl mx-auto w-full space-y-6">
+          <div className="space-y-6">
             <div className="space-y-4">
               <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
                 <Calendar className="text-cyan-400" size={20} />
