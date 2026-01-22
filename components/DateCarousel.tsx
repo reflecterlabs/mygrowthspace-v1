@@ -46,7 +46,7 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
   const dates = generateDateRange(selectedDate, 3);
 
   return (
-    <div className="flex items-center gap-3 bg-white/5 rounded-[2.5rem] p-4 border border-white/10 overflow-x-auto no-scrollbar">
+    <div className="flex items-center gap-3 bg-white/5 rounded-[2.5rem] p-4 border border-white/10 w-full">
       <button
         onClick={handlePrevDay}
         className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-400/50 transition-all"
@@ -54,7 +54,7 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
         <ChevronLeft size={18} />
       </button>
 
-      <div className="flex gap-2 flex-1 overflow-x-auto no-scrollbar">
+      <div className="flex gap-2 flex-1 overflow-x-auto no-scrollbar pr-0">
         {dates.map((d) => {
           const isSelected = d.date === selectedDate;
           const isToday = d.date === today;
