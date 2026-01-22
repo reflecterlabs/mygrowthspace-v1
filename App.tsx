@@ -33,6 +33,7 @@ const App: React.FC = () => {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -74,7 +75,7 @@ const App: React.FC = () => {
           daysOfWeek: h.days_of_week || [],
           time: h.time_of_day,
           streak: h.streak || 0,
-          completedDates: [],
+          completedDates: h.completed_dates || [],
           createdAt: h.created_at || new Date().toISOString()
         })));
       }
@@ -172,6 +173,55 @@ const App: React.FC = () => {
     }
   };
 
+  const deleteHabit = async (habitId: string) => {
+    setHabitToDelete(habitId);
+  };
+
+  const confirmDeleteHabit = async () => {
+    if (!habitToDelete) return;
+    try {
+      await supabase.from('habits').delete().eq('id', habitToDelete);
+      setHabits(prev => prev.filter(h => h.id !== habitToDelete));
+      setHabitToDelete(null);
+    } catch (err) {
+      console.error('Error deleting habit:', err);
+      setHabitToDelete(null);
+    }
+  };
+
+  const toggleHabitCompletion = async (habitId: string, date: string) => {
+    try {
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) return;
+
+      const isCompleted = habit.completedDates.includes(date);
+      let updatedDates: string[];
+
+      if (isCompleted) {
+        updatedDates = habit.completedDates.filter(d => d !== date);
+      } else {
+        updatedDates = [...habit.completedDates, date];
+      }
+
+      setHabits(prev =>
+        prev.map(h =>
+          h.id === habitId ? { ...h, completedDates: updatedDates } : h
+        )
+      );
+
+      await supabase
+        .from('habits')
+        .update({ completed_dates: updatedDates })
+        .eq('id', habitId);
+    } catch (err) {
+      console.error('Error toggling habit completion:', err);
+    }
+  };
+
+  const editHabit = (habit: Habit) => {
+    console.log('Edit habit:', habit);
+  };
+
   if (authLoading) return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
   if (!user) return <Login />;
   if (showOnboarding) return <Onboarding onComplete={handleOnboardingComplete} />;
@@ -249,7 +299,7 @@ const App: React.FC = () => {
                 </div>
               ) : (
                 habits.map(h => (
-                  <HabitCard key={h.id} habit={h} selectedDateStr={selectedDate} onToggle={() => {}} onDelete={() => {}} onEdit={() => {}} />
+                  <HabitCard key={h.id} habit={h} selectedDateStr={selectedDate} onToggle={toggleHabitCompletion} onDelete={deleteHabit} onEdit={editHabit} />
                 ))
               )}
             </div>
@@ -267,6 +317,31 @@ const App: React.FC = () => {
       </div>
 
       <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
+
+      {habitToDelete && (
+        <div className="fixed inset-0 z-[105] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-2xl">
+            <h3 className="text-xl font-black text-white mb-4">Delete Habit?</h3>
+            <p className="text-slate-400 text-sm mb-8">
+              Are you sure you want to delete this habit? This action cannot be undone.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setHabitToDelete(null)}
+                className="flex-1 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-sm hover:bg-white/10 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteHabit}
+                className="flex-1 px-6 py-3 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-400 font-black text-sm hover:bg-red-500/30 transition-all"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
