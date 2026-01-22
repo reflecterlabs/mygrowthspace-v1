@@ -119,14 +119,12 @@ const App: React.FC = () => {
       if (selectErr) console.error('Error checking existing habit:', selectErr);
 
       if (existing) {
-        // Already exists — just refresh UI
-        setSuggestions([]);
-        setIsModalOpen(false);
-        fetchUserData();
+        // Already exists — remove from suggestions and show feedback
+        setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
         return;
       }
 
-      await supabase.from('habits').insert({
+      const { error: insertError } = await supabase.from('habits').insert({
         user_id: user?.id,
         name: habitData.name,
         category: habitData.category,
@@ -135,12 +133,18 @@ const App: React.FC = () => {
         time_of_day: habitData.time,
         start_date: new Date().toISOString().split('T')[0]
       });
-    } catch (err) {
-      console.error('Error saving habit:', err);
-    } finally {
-      setSuggestions([]);
+
+      if (insertError) {
+        console.error('Error inserting habit:', insertError);
+        return;
+      }
+
+      // Only remove this specific suggestion after successful save
+      setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
       setIsModalOpen(false);
       fetchUserData();
+    } catch (err) {
+      console.error('Error saving habit:', err);
     }
   };
 
