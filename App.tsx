@@ -18,6 +18,7 @@ import HabitCard from './components/HabitCard';
 import AddHabitModal from './components/AddHabitModal';
 import InsightCard from './components/InsightCard';
 import DateCarousel from './components/DateCarousel';
+import BottomNavBar from './components/BottomNavBar';
 import { supabase } from './src/integrations/supabase/client';
 import { Habit, UserProfile } from './types';
 import { generateSuggestedCards } from './services/geminiService';
@@ -215,10 +216,21 @@ const App: React.FC = () => {
         )
       );
 
-      await supabase
+      const { data, error } = await supabase
         .from('habits')
         .update({ completed_dates: updatedDates })
-        .eq('id', habitId);
+        .eq('id', habitId)
+        .select();
+
+      if (error) {
+        console.error('Error updating habit completion:', error);
+        // Revert the UI change on error
+        setHabits(prev =>
+          prev.map(h =>
+            h.id === habitId ? { ...h, completedDates: habit.completedDates } : h
+          )
+        );
+      }
     } catch (err) {
       console.error('Error toggling habit completion:', err);
     }
@@ -251,7 +263,7 @@ const App: React.FC = () => {
   if (showOnboarding) return <Onboarding onComplete={handleOnboardingComplete} />;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-24">
+    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-28">
       <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-cyan-500/10 rounded-xl flex items-center justify-center text-cyan-400 border border-cyan-500/20">
@@ -367,14 +379,12 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <div className="fixed bottom-8 left-0 right-0 flex justify-center">
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="w-16 h-16 bg-white text-black rounded-3xl shadow-xl flex items-center justify-center hover:scale-110 transition-all"
-        >
-          <Plus size={32} strokeWidth={3} />
-        </button>
-      </div>
+      <BottomNavBar 
+        onAddClick={() => setIsModalOpen(true)}
+        onHomeClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onInsightsClick={() => {}}
+        onProfileClick={() => {}}
+      />
 
       <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
 
