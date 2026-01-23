@@ -37,6 +37,7 @@ const App: React.FC = () => {
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const [editingStatement, setEditingStatement] = useState('');
+  const [currentView, setCurrentView] = useState<'home' | 'insights' | 'profile'>('home');
 
   useEffect(() => {
     if (user) {
@@ -204,34 +205,27 @@ const App: React.FC = () => {
       if (!habit) return;
 
       const isCompleted = habit.completedDates.includes(date);
-      let updatedDates: string[];
+      const updatedDates = isCompleted 
+        ? habit.completedDates.filter(d => d !== date)
+        : [...habit.completedDates, date];
 
-      if (isCompleted) {
-        updatedDates = habit.completedDates.filter(d => d !== date);
-      } else {
-        updatedDates = [...habit.completedDates, date];
-      }
-
+      // Optimistic update
+      const originalHabits = habits;
       setHabits(prev =>
         prev.map(h =>
           h.id === habitId ? { ...h, completedDates: updatedDates } : h
         )
       );
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('habits')
         .update({ completed_dates: updatedDates })
-        .eq('id', habitId)
-        .select();
+        .eq('id', habitId);
 
       if (error) {
         console.error('Error updating habit completion:', error);
-        // Revert the UI change on error
-        setHabits(prev =>
-          prev.map(h =>
-            h.id === habitId ? { ...h, completedDates: habit.completedDates } : h
-          )
-        );
+        // Revert on error
+        setHabits(originalHabits);
       }
     } catch (err) {
       console.error('Error toggling habit completion:', err);
@@ -382,10 +376,14 @@ const App: React.FC = () => {
       </main>
 
       <BottomNavBar 
+        currentView={currentView}
         onAddClick={() => setIsModalOpen(true)}
-        onHomeClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        onInsightsClick={() => {}}
-        onProfileClick={() => {}}
+        onHomeClick={() => {
+          setCurrentView('home');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onInsightsClick={() => setCurrentView('insights')}
+        onProfileClick={() => setCurrentView('profile')}
       />
 
       <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
