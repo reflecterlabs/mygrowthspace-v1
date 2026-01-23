@@ -132,7 +132,8 @@ const App: React.FC = () => {
         frequency: habitData.frequency || 'daily',
         days_of_week: habitData.daysOfWeek || [0,1,2,3,4,5,6],
         time_of_day: habitData.time,
-        start_date: new Date().toISOString().split('T')[0]
+        start_date: new Date().toISOString().split('T')[0],
+        completed_dates: []
       });
 
       if (insertError) {
@@ -166,7 +167,8 @@ const App: React.FC = () => {
           category: h.category,
           frequency: h.frequency,
           days_of_week: h.daysOfWeek,
-          time_of_day: h.time
+          time_of_day: h.time,
+          completed_dates: []
         }));
         await supabase.from('habits').insert(habitsToInsert);
       }
