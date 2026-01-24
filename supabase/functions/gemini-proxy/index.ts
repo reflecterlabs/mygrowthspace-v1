@@ -1,4 +1,6 @@
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+// @ts-ignore
 import { GoogleGenAI, Type } from "https://esm.sh/@google/genai@1.38.0";
 
 const corsHeaders = {
@@ -6,16 +8,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+serve(async (req: any) => { // req tipado como 'any'
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { action, payload } = await req.json();
+    const { action, payload } = await req.json(); // Movido al inicio del bloque try
     console.log("[gemini-proxy] Received action:", action, "with payload:", payload);
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    // @ts-ignore
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY"); // Ignorando 'Deno'
     if (!GEMINI_API_KEY) {
       console.error("[gemini-proxy] GEMINI_API_KEY is not set in environment variables.");
       return new Response(JSON.stringify({ error: "GEMINI_API_KEY not configured" }), {
@@ -58,12 +61,16 @@ serve(async (req) => {
         break;
 
       case 'parseRoutineIntoHabits':
-        result = await ai.models.generateContent({
-          model: 'gemini-3-pro-preview',
-          contents: `Analyze this routine narrative: "${payload.narrative}". 
+        const parseRoutinePrompt = `Analyze this routine narrative: "${payload.narrative}". 
           1. Extract a list of atomic habits. For each, identify: name, category (Health, Mindset, Productivity, Finance, Social), time (HH:mm if mentioned), description, and daysOfWeek (array 0-6).
           2. Create a one-sentence "Identity Statement" (e.g. "I am a person who...") based on these actions.
-          Return as JSON in English.`,
+          Return as JSON in English.`;
+        
+        console.log("[gemini-proxy] Sending prompt to Gemini for parseRoutineIntoHabits:", parseRoutinePrompt);
+
+        const geminiResponse = await ai.models.generateContent({
+          model: 'gemini-3-pro-preview',
+          contents: parseRoutinePrompt,
           config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -89,7 +96,17 @@ serve(async (req) => {
             }
           }
         });
-        result = JSON.parse(result.text || '{}');
+        
+        const rawGeminiText = geminiResponse.text;
+        console.log("[gemini-proxy] Raw Gemini response for parseRoutineIntoHabits:", rawGeminiText);
+
+        try {
+          result = JSON.parse(rawGeminiText || '{}');
+          console.log("[gemini-proxy] Parsed Gemini response for parseRoutineIntoHabits:", result);
+        } catch (jsonError) {
+          console.error("[gemini-proxy] JSON parsing error for parseRoutineIntoHabits:", jsonError);
+          result = { habits: [], identity: "I am forging my new self." }; // Fallback
+        }
         break;
 
       case 'generateSuggestedCards':
@@ -175,7 +192,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("[gemini-proxy] Error processing request:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), { // Aserción de tipo para 'error.message'
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
