@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { SuggestedCard } from '../types';
-import { Dumbbell, Clock, Zap, Target, X, Check } from 'lucide-react';
+import { Dumbbell, Clock, Target, X, Check } from 'lucide-react';
 
 interface Props {
   card: SuggestedCard;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, Dumbbell, Clock, Calendar, Zap } from 'lucide-react';
+import { X, Check, Dumbbell, Clock } from 'lucide-react';
 import { Habit } from '../types';
 
 interface Props {

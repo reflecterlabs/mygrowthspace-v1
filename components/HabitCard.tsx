@@ -1,13 +1,12 @@
-
 import React from 'react';
 import { Habit } from '../types';
-import { CheckCircle, Circle, Flame, Trash2, CheckSquare, Square, Dumbbell } from 'lucide-react';
+import { CheckCircle, Circle, Flame, Trash2 } from 'lucide-react';
 
 interface HabitCardProps {
   habit: Habit;
   selectedDateStr: string;
   isSelectionMode?: boolean;
-  isSelected?: boolean;
+  isSelected?: boolean; // Esta prop no se utiliza en el componente
   onToggleSelection?: (id: string) => void;
   onToggle: (id: string, date: string) => void;
   onDelete: (id: string) => void;
@@ -21,7 +20,6 @@ const HabitCard: React.FC<HabitCardProps> = ({
   onDelete, 
   onEdit,
   isSelectionMode,
-  isSelected,
   onToggleSelection
 }) => {
   const isCompletedOnDate = habit.completedDates.includes(selectedDateStr);

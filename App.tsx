@@ -2,14 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { 
   Dumbbell, 
   Calendar, 
-  Plus, 
-  Flame,
   User as UserIcon,
   LogOut,
   Loader2,
   Zap,
-  ChevronRight,
-  Sparkles
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from './src/components/AuthProvider';
 import Login from './src/pages/Login';
@@ -27,7 +24,7 @@ const App: React.FC = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true); // Eliminado: no se usa para renderizar UI
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [quickLog, setQuickLog] = useState('');
@@ -47,8 +44,8 @@ const App: React.FC = () => {
 
   const fetchUserData = async () => {
     try {
-      setLoading(true);
-      const { data: profileData, error: profileError } = await supabase
+      // setLoading(true); // Eliminado: la variable 'loading' no se usa para renderizar UI
+      const { data: profileData } = await supabase // Eliminado: 'profileError' no se usa
         .from('user_profiles')
         .select('*')
         .eq('user_id', user?.id)
@@ -86,7 +83,7 @@ const App: React.FC = () => {
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      setLoading(false);
+      // setLoading(false); // Eliminado: la variable 'loading' no se usa para renderizar UI
     }
   };
 
@@ -153,7 +150,7 @@ const App: React.FC = () => {
 
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
     try {
-      setLoading(true);
+      // setLoading(true); // Eliminado: la variable 'loading' no se usa para renderizar UI
       await supabase.from('user_profiles').upsert({
         user_id: user?.id,
         name: newProfile.name,
@@ -179,7 +176,7 @@ const App: React.FC = () => {
     } catch (error) {
       console.error("Error saving onboarding:", error);
     } finally {
-      setLoading(false);
+      // setLoading(false); // Eliminado: la variable 'loading' no se usa para renderizar UI
     }
   };
 

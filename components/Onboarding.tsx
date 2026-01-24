@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserProfile, Habit } from '../types';
 import { 
   User, 
@@ -7,14 +6,10 @@ import {
   Dumbbell, 
   BookOpen, 
   Check, 
-  X, 
   Loader2, 
-  Calendar as CalendarIcon, 
-  Clock, 
   ArrowRight,
   Plus,
-  Trash2,
-  Info
+  Trash2
 } from 'lucide-react';
 import { parseRoutineIntoHabits } from '../services/geminiService';
 
@@ -23,7 +18,7 @@ interface OnboardingProps {
 }
 
 const CATEGORIES = ['Health', 'Mindset', 'Productivity', 'Finance', 'Social'];
-const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+// const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // No utilizada
 
 const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [step, setStep] = useState(0); 
