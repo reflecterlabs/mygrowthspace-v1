@@ -24,6 +24,5 @@
     }
   },
   "include": ["src", "components", "App.tsx", "index.tsx", "types.ts", "services"],
-  "exclude": ["node_modules", "dist", "supabase/functions"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "exclude": ["node_modules", "dist", "supabase/functions"]
 }
