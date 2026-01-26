@@ -34,15 +34,23 @@ const App: React.FC = () => {
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const [editingStatement, setEditingStatement] = useState('');
   const [currentView, setCurrentView] = useState<'home' | 'insights' | 'profile'>('home');
+  const [profileLoading, setProfileLoading] = useState(true); // Nuevo estado para la carga del perfil
 
   useEffect(() => {
     if (user) {
       fetchUserData();
+    } else {
+      // Si el usuario cierra sesión o no está presente, restablecer estados y detener la carga
+      setProfile(null);
+      setHabits([]);
+      setShowOnboarding(false);
+      setProfileLoading(false); // No hay perfil que cargar si no hay usuario
     }
   }, [user]);
 
   const fetchUserData = async () => {
     console.log("App: Iniciando fetchUserData...");
+    setProfileLoading(true); // Iniciar la carga del perfil
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
@@ -58,6 +66,7 @@ const App: React.FC = () => {
       if (!profileData || profileData.has_completed_onboarding === false) {
         console.log("App: Perfil no encontrado o onboarding incompleto. Mostrando onboarding.");
         setShowOnboarding(true);
+        setProfile(null); // Asegurarse de que el perfil sea null si se necesita el onboarding
       } else {
         console.log("App: Perfil de usuario cargado:", profileData);
         setProfile({
@@ -68,7 +77,8 @@ const App: React.FC = () => {
           focusAreas: profileData.focus_areas,
           narrative: profileData.narrative
         });
-
+        setShowOnboarding(false); // Asegurarse de que el onboarding esté oculto si el perfil se cargó
+        
         const { data: habitsData, error: habitsError } = await supabase
           .from('habits')
           .select('*')
@@ -100,6 +110,7 @@ const App: React.FC = () => {
       setShowOnboarding(true); // Podría ser útil volver al onboarding o mostrar un error
     } finally {
       console.log("App: fetchUserData finalizado.");
+      setProfileLoading(false); // Finalizar la carga del perfil
     }
   };
 
@@ -279,11 +290,14 @@ const App: React.FC = () => {
     }
   };
 
-  if (authLoading) return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
+  // Mostrar spinner si la autenticación o la carga del perfil están en curso
+  if (authLoading || profileLoading) return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
   if (!user) return <Login />;
   if (showOnboarding) return <Onboarding onComplete={handleOnboardingComplete} />;
 
-  // Comprobación defensiva para el perfil antes de renderizar el contenido principal
+  // Esta comprobación defensiva ahora solo se activará si hay un problema genuino
+  // después de que la carga del perfil haya terminado y el usuario esté presente,
+  // pero el perfil sigue siendo null.
   if (!profile) {
     console.error("App: El perfil es null/undefined cuando debería estar cargado. Esto indica un problema.");
     return (
