@@ -461,7 +461,7 @@ const App: React.FC = () => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onInsightsClick={() => setCurrentView('insights')}
-        onProfileClick={() => setCurrentView('profile')} {/* Re-habilitado */}
+        onProfileClick={() => setCurrentView('profile')} 
       />
 
       <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
