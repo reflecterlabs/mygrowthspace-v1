@@ -6,7 +6,7 @@ import {
   Zap,
   RotateCcw, 
   SendHorizonal, 
-  Plus // Importar el icono Plus
+  Plus 
 } from 'lucide-react';
 import { useAuth } from './src/components/AuthProvider';
 import Login from './src/pages/Login';
@@ -33,7 +33,7 @@ const App: React.FC = () => {
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const [editingStatement, setEditingStatement] = useState('');
-  const [currentView, setCurrentView] = useState<'home' | 'insights'>('home'); // 'profile' eliminado del tipo
+  const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
 
   // --- Efectos de React ---
   useEffect(() => {
@@ -350,11 +350,11 @@ const App: React.FC = () => {
   console.log("App: Renderizando contenido principal. Perfil:", profile, "Hábitos:", habits);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-64"> {/* Aumentado a pb-64 */}
+    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-64">
       <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex flex-col items-start">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">CORE PROTOCOL</span>
-          <span className="font-black text-2xl tracking-tighter text-white">Identity Hub</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">My Growth Space</span>
+          <span className="font-black text-2xl tracking-tighter text-white">{profile?.name || 'Guest'}</span>
         </div>
         <button onClick={() => signOut()} className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center hover:text-red-400 transition-all">
           <LogOut size={18} />
@@ -365,10 +365,10 @@ const App: React.FC = () => {
         {/* Sección de Perfil de Persona */}
         <div className="relative bg-gradient-to-br from-blue-600/10 to-cyan-500/10 border border-blue-600/20 rounded-[2.5rem] p-8 flex flex-col gap-8 items-center max-w-3xl mx-auto w-full">
           <div className="absolute top-6 right-6 text-cyan-500 opacity-20">
-            <UserIcon size={80} strokeWidth={1} /> {/* Icono de fondo sutil */}
+            <UserIcon size={80} strokeWidth={1} />
           </div>
           <div className="flex-1 text-center relative z-10">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">PERSONA PROFILE</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">PERSONA MANIFEST</span>
             {isEditingStatement ? (
               <div className="mt-4 space-y-3">
                 <textarea
@@ -440,14 +440,14 @@ const App: React.FC = () => {
       </button>
 
       {/* Quick Log Input y Sugerencias (ahora flotante en la parte inferior) */}
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4"> {/* flex-col para apilar sugerencias arriba del input */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4">
         {suggestions.length > 0 && (
           <div className="space-y-4">
             {suggestions.map((suggestion, idx) => (
               <InsightCard 
                 key={idx}
                 suggestion={suggestion}
-                onAccept={saveHabit} // La funcionalidad ya está en saveHabit
+                onAccept={saveHabit}
                 onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
               />
             ))}
