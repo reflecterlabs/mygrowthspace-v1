@@ -22,17 +22,15 @@ import { generateSuggestedCards } from './services/geminiService';
 import InsightsPage from './src/pages/InsightsPage'; // Importar la nueva página de Insights
 
 // Helper function for streak calculation (moved outside component for reusability)
-const calculateStreak = (habit: Habit, allCompletedDates: string[], referenceDateStr: string): { streak: number; lastCompletedDate: string | null } => {
-  // Filter completed dates up to and including the reference date
-  const relevantCompletedDates = allCompletedDates.filter(date => date <= referenceDateStr).sort();
-
-  if (relevantCompletedDates.length === 0) {
+const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
+  const sortedDates = [...allCompletedDates].sort();
+  if (sortedDates.length === 0) {
     return { streak: 0, lastCompletedDate: null };
   }
 
   if (habit.isOneTime) {
     const targetDate = habit.specificDates?.[0];
-    if (targetDate && relevantCompletedDates.includes(targetDate)) {
+    if (targetDate && sortedDates.includes(targetDate)) {
       return { streak: 1, lastCompletedDate: targetDate };
     }
     return { streak: 0, lastCompletedDate: null };
@@ -40,36 +38,58 @@ const calculateStreak = (habit: Habit, allCompletedDates: string[], referenceDat
 
   if (habit.frequency === 'daily') {
     let currentStreak = 0;
-    let checkDate = new Date(referenceDateStr); // Start checking from the reference date
+    let streakEndsOnDate: string | null = null; // This will store the latest date in the streak
 
-    // Iterate backwards from the reference date
-    while (true) {
-      const checkDateStr = checkDate.toISOString().split('T')[0];
-      
-      // Check if this date is in the relevantCompletedDates
-      if (relevantCompletedDates.includes(checkDateStr)) {
+    const actualToday = new Date();
+    actualToday.setHours(0, 0, 0, 0); // Normalize to start of day
+    const actualTodayStr = actualToday.toISOString().split('T')[0];
+
+    // Filter completed dates up to and including actualToday
+    const relevantCompletedDates = sortedDates.filter(date => date <= actualTodayStr);
+
+    if (relevantCompletedDates.length === 0) {
+      return { streak: 0, lastCompletedDate: null };
+    }
+
+    let checkDate = new Date(actualToday); // Start checking from actual today
+    checkDate.setHours(0, 0, 0, 0);
+
+    // Check if today is completed
+    if (relevantCompletedDates.includes(actualTodayStr)) {
+      currentStreak++;
+      streakEndsOnDate = actualTodayStr;
+      checkDate.setDate(checkDate.getDate() - 1); // Move to yesterday
+    } else {
+      // If not completed today, check if yesterday was completed
+      checkDate.setDate(checkDate.getDate() - 1); // Move to yesterday
+      const yesterdayStr = checkDate.toISOString().split('T')[0];
+      if (relevantCompletedDates.includes(yesterdayStr)) {
         currentStreak++;
-        checkDate.setDate(checkDate.getDate() - 1); // Move to the previous day
+        streakEndsOnDate = yesterdayStr;
+        checkDate.setDate(checkDate.getDate() - 1); // Move to day before yesterday
       } else {
-        // If not completed on this date, the streak is broken
-        break;
+        // No completion today or yesterday, streak is 0
+        return { streak: 0, lastCompletedDate: relevantCompletedDates[relevantCompletedDates.length - 1] };
       }
+    }
 
-      // Safety break to prevent infinite loops in edge cases, though not strictly needed with sorted dates
-      if (currentStreak > relevantCompletedDates.length + 1) break; 
+    // Continue checking backwards
+    while (true) {
+      const currentCheckDateStr = checkDate.toISOString().split('T')[0];
+      if (relevantCompletedDates.includes(currentCheckDateStr)) {
+        currentStreak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break; // Streak broken
+      }
     }
     
-    // The last completed date for the streak is the latest date in the streak.
-    // If currentStreak is 0, it means the habit wasn't completed on referenceDateStr.
-    // If currentStreak > 0, the last completed date is referenceDateStr.
-    // However, the `lastCompletedDate` property in the habit object should reflect the actual last completion, not just the streak end.
-    // So, it should be the latest date in `relevantCompletedDates`.
-    return { streak: currentStreak, lastCompletedDate: relevantCompletedDates[relevantCompletedDates.length - 1] || null };
+    return { streak: currentStreak, lastCompletedDate: streakEndsOnDate };
   }
 
   // For 'weekly' habits, a simple streak calculation is more complex and out of scope for this single response.
   // For now, we'll just return 0 streak for weekly habits.
-  return { streak: 0, lastCompletedDate: relevantCompletedDates[relevantCompletedDates.length - 1] || null };
+  return { streak: 0, lastCompletedDate: sortedDates[sortedDates.length - 1] || null };
 };
 
 
@@ -328,7 +348,9 @@ const App: React.FC = () => {
         : [...habit.completedDates, date];
 
       // Calcular nueva racha y última fecha de completado
-      const { streak: newStreak, lastCompletedDate: newLastCompletedDate } = calculateStreak(habit, updatedDates, selectedDate);
+      // La función calculateStreak ahora solo necesita las fechas completadas,
+      // ya que internamente usa la fecha actual para determinar el final de la racha.
+      const { streak: newStreak, lastCompletedDate: newLastCompletedDate } = calculateStreak(habit, updatedDates);
 
       const originalHabits = habits;
       setHabits(prev =>
