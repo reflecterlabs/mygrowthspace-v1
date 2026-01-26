@@ -8,6 +8,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const ALLOWED_CATEGORIES = ['Health', 'Mindset', 'Productivity', 'Finance', 'Social']; // Definir categorías permitidas
+
 serve(async (req: any) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -65,7 +67,7 @@ serve(async (req: any) => {
       case 'parseRoutineIntoHabits':
         const parseRoutinePrompt = `Analyze this routine narrative: "${payload.narrative}". 
           First, identify the language of the narrative.
-          1. Extract a list of atomic habits. For each, identify: name, category (Health, Mindset, Productivity, Finance, Social), time (HH:mm if mentioned), description, and daysOfWeek (array 0-6).
+          1. Extract a list of atomic habits. For each, identify: name, category (MUST be one of: ${ALLOWED_CATEGORIES.join(', ')}), time (HH:mm if mentioned), description, and daysOfWeek (array 0-6).
           2. Create a one-sentence "Identity Statement" (e.g. "I am a person who...") based on these actions.
           Return all habit details and the identity statement in the identified language, in JSON format.`;
         
@@ -85,7 +87,7 @@ serve(async (req: any) => {
                     type: Type.OBJECT,
                     properties: {
                       name: { type: Type.STRING },
-                      category: { type: Type.STRING },
+                      category: { type: Type.ENUM, enum: ALLOWED_CATEGORIES }, // Usar Type.ENUM
                       time: { type: Type.STRING },
                       description: { type: Type.STRING },
                       daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } }
@@ -132,7 +134,9 @@ serve(async (req: any) => {
           * set 'isOneTime': false
           * set 'daysOfWeek': [0-6] based on the pattern.
         
-        Return as JSON array of SuggestedCard. The suggestedAction.type MUST be 'create_habit'.`;
+        Return as JSON array of SuggestedCard. The suggestedAction.type MUST be 'create_habit'.
+        
+        IMPORTANT: For habit categories, ONLY use one of these exact values: ${ALLOWED_CATEGORIES.join(', ')}.`; // Añadir a la instrucción
 
         result = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
@@ -157,7 +161,7 @@ serve(async (req: any) => {
                         type: Type.OBJECT,
                         properties: {
                           name: { type: Type.STRING },
-                          category: { type: Type.STRING },
+                          category: { type: Type.ENUM, enum: ALLOWED_CATEGORIES }, // Usar Type.ENUM
                           frequency: { type: Type.STRING },
                           daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } },
                           specificDates: { type: Type.ARRAY, items: { type: Type.STRING } },
