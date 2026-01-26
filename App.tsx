@@ -42,16 +42,24 @@ const App: React.FC = () => {
   }, [user]);
 
   const fetchUserData = async () => {
+    console.log("App: Iniciando fetchUserData...");
     try {
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', user?.id)
         .maybeSingle();
+
+      if (profileError) {
+        console.error("App: Error al obtener datos del perfil:", profileError);
+        throw profileError; // Propagar el error para que sea capturado por el catch
+      }
       
       if (!profileData || profileData.has_completed_onboarding === false) {
+        console.log("App: Perfil no encontrado o onboarding incompleto. Mostrando onboarding.");
         setShowOnboarding(true);
       } else {
+        console.log("App: Perfil de usuario cargado:", profileData);
         setProfile({
           name: profileData.name,
           email: profileData.email,
@@ -61,11 +69,17 @@ const App: React.FC = () => {
           narrative: profileData.narrative
         });
 
-        const { data: habitsData } = await supabase
+        const { data: habitsData, error: habitsError } = await supabase
           .from('habits')
           .select('*')
           .eq('user_id', user?.id);
+
+        if (habitsError) {
+          console.error("App: Error al obtener datos de hábitos:", habitsError);
+          throw habitsError; // Propagar el error
+        }
         
+        console.log("App: Hábitos cargados:", habitsData);
         setHabits((habitsData || []).map(h => ({
           id: h.id,
           name: h.name,
@@ -79,9 +93,13 @@ const App: React.FC = () => {
         })));
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("App: Error general en fetchUserData:", error);
+      // Asegurarse de que el perfil y los hábitos estén en un estado conocido en caso de error
+      setProfile(null); 
+      setHabits([]);
+      setShowOnboarding(true); // Podría ser útil volver al onboarding o mostrar un error
     } finally {
-      // setLoading(false);
+      console.log("App: fetchUserData finalizado.");
     }
   };
 
@@ -95,7 +113,7 @@ const App: React.FC = () => {
       setSuggestions(aiSuggestions);
       setQuickLog('');
     } catch (err) {
-      console.error("AI Error:", err);
+      console.error("App: AI Error en handleQuickLog:", err);
     } finally {
       setIsProcessingAI(false);
     }
@@ -113,7 +131,7 @@ const App: React.FC = () => {
         .eq('name', habitData.name)
         .maybeSingle();
 
-      if (selectErr) console.error('Error checking existing habit:', selectErr);
+      if (selectErr) console.error('App: Error checking existing habit:', selectErr);
 
       if (existing) {
         // Already exists — remove from suggestions and show feedback
@@ -130,10 +148,10 @@ const App: React.FC = () => {
         time_of_day: habitData.time,
         start_date: new Date().toISOString().split('T')[0],
         completed_dates: []
-      }).select(); // Añadido .select() aquí
+      }).select();
 
       if (insertError) {
-        console.error('Error inserting habit:', insertError);
+        console.error('App: Error inserting habit:', insertError);
         return;
       }
 
@@ -142,18 +160,24 @@ const App: React.FC = () => {
       setIsModalOpen(false);
       fetchUserData();
     } catch (err) {
-      console.error('Error saving habit:', err);
+      console.error('App: Error saving habit:', err);
     }
   };
 
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
+    console.log("App: Completando onboarding...");
     try {
-      await supabase.from('user_profiles').upsert({
+      const { error: profileUpsertError } = await supabase.from('user_profiles').upsert({
         user_id: user?.id,
         name: newProfile.name,
         identity_statement: newProfile.identityStatement,
         has_completed_onboarding: true
       }, { onConflict: 'user_id' });
+
+      if (profileUpsertError) {
+        console.error("App: Error al guardar el perfil en onboarding:", profileUpsertError);
+        throw profileUpsertError;
+      }
 
       if (newHabits.length > 0) {
         const habitsToInsert = newHabits.map(h => ({
@@ -165,15 +189,20 @@ const App: React.FC = () => {
           time_of_day: h.time,
           completed_dates: []
         }));
-        await supabase.from('habits').insert(habitsToInsert).select(); // Añadido .select() aquí
+        const { error: habitsInsertError } = await supabase.from('habits').insert(habitsToInsert).select();
+        if (habitsInsertError) {
+          console.error("App: Error al insertar hábitos en onboarding:", habitsInsertError);
+          throw habitsInsertError;
+        }
       }
 
       setShowOnboarding(false);
       fetchUserData();
     } catch (error) {
-      console.error("Error saving onboarding:", error);
+      console.error("App: Error general al guardar datos de onboarding:", error);
+      // Podrías querer mostrar un mensaje de error al usuario aquí
     } finally {
-      // setLoading(false);
+      console.log("App: Onboarding completado.");
     }
   };
 
@@ -188,7 +217,7 @@ const App: React.FC = () => {
       setHabits(prev => prev.filter(h => h.id !== habitToDelete));
       setHabitToDelete(null);
     } catch (err) {
-      console.error('Error deleting habit:', err);
+      console.error('App: Error deleting habit:', err);
       setHabitToDelete(null);
     }
   };
@@ -217,17 +246,17 @@ const App: React.FC = () => {
         .eq('id', habitId);
 
       if (error) {
-        console.error('Error updating habit completion:', error);
+        console.error('App: Error updating habit completion:', error);
         // Revert on error
         setHabits(originalHabits);
       }
     } catch (err) {
-      console.error('Error toggling habit completion:', err);
+      console.error('App: Error toggling habit completion:', err);
     }
   };
 
   const editHabit = (habit: Habit) => {
-    console.log('Edit habit:', habit);
+    console.log('App: Edit habit:', habit);
   };
 
   const startEditStatement = () => {
@@ -244,13 +273,30 @@ const App: React.FC = () => {
       setProfile({ ...profile, identityStatement: editingStatement });
       setIsEditingStatement(false);
     } catch (err) {
-      console.error('Error updating statement:', err);
+      console.error('App: Error updating statement:', err);
     }
   };
 
   if (authLoading) return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
   if (!user) return <Login />;
   if (showOnboarding) return <Onboarding onComplete={handleOnboardingComplete} />;
+
+  // Comprobación defensiva para el perfil antes de renderizar el contenido principal
+  if (!profile) {
+    console.error("App: El perfil es null/undefined cuando debería estar cargado. Esto indica un problema.");
+    return (
+      <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-4 text-red-500 text-center">
+        <Zap size={40} className="mb-4" />
+        <h2 className="text-xl font-bold mb-2">Error de Carga de Perfil</h2>
+        <p className="text-sm">No se pudo cargar la información de tu perfil. Por favor, intenta refrescar la página.</p>
+        <button onClick={() => window.location.reload()} className="mt-6 px-6 py-3 bg-white/10 border border-white/20 rounded-xl text-white font-bold hover:bg-white/20 transition-all">
+          Refrescar
+        </button>
+      </div>
+    );
+  }
+
+  console.log("App: Renderizando contenido principal. Perfil:", profile, "Hábitos:", habits);
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-28">
