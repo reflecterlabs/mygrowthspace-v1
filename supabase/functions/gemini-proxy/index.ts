@@ -87,7 +87,7 @@ serve(async (req: any) => {
                     type: Type.OBJECT,
                     properties: {
                       name: { type: Type.STRING },
-                      category: { type: Type.STRING, enum: ALLOWED_CATEGORIES }, // Corregido: Type.STRING antes de enum
+                      category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
                       time: { type: Type.STRING },
                       description: { type: Type.STRING },
                       daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } }
@@ -136,7 +136,7 @@ serve(async (req: any) => {
         
         Return as JSON array of SuggestedCard. The suggestedAction.type MUST be 'create_habit'.
         
-        IMPORTANT: For habit categories, ONLY use one of these exact values: ${ALLOWED_CATEGORIES.join(', ')}.`; // Añadir a la instrucción
+        IMPORTANT: For habit categories, ONLY use one of these exact values: ${ALLOWED_CATEGORIES.join(', ')}.`;
 
         result = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
@@ -161,8 +161,8 @@ serve(async (req: any) => {
                         type: Type.OBJECT,
                         properties: {
                           name: { type: Type.STRING },
-                          category: { type: Type.STRING, enum: ALLOWED_CATEGORIES }, // Corregido: Type.STRING antes de enum
-                          frequency: { type: Type.STRING },
+                          category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
+                          frequency: { type: Type.STRING, enum: ['daily', 'weekly'] }, // <--- Modificado aquí
                           daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } },
                           specificDates: { type: Type.ARRAY, items: { type: Type.STRING } },
                           isOneTime: { type: Type.BOOLEAN },
