@@ -70,7 +70,7 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
         <ChevronLeft size={18} />
       </button>
 
-      <div className="flex gap-2 flex-1 overflow-x-auto no-scrollbar pr-0">
+      <div className="flex gap-2 flex-1 overflow-x-auto no-scrollbar px-4">
         {dates.map((d) => {
           const isSelected = d.date === selectedDate;
           const isToday = d.date === today;
