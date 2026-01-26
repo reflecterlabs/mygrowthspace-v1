@@ -335,7 +335,7 @@ const App: React.FC = () => {
   console.log("App: Renderizando contenido principal. Perfil:", profile, "Hábitos:", habits);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-56"> {/* Cambiado de pb-48 a pb-56 */}
+    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-56">
       <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex flex-col items-start">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">CORE PROTOCOL</span>
@@ -346,40 +346,37 @@ const App: React.FC = () => {
         </button>
       </nav>
 
-      {/* Quick Log Input - Ahora flotante */}
-      <div className="fixed bottom-[15%] left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30">
-        <section className="w-full space-y-6">
-          <form onSubmit={handleQuickLog} className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
-            <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
-              <div className="pl-4 text-slate-500">
-                {isProcessingAI ? <Loader2 size={20} className="animate-spin" /> : <RotateCcw size={20} />}
-              </div>
-              <input 
-                type="text" 
-                placeholder="Feed protocol data..." 
-                className="w-full bg-transparent p-4 outline-none text-white font-medium placeholder:text-slate-600"
-                value={quickLog}
-                onChange={(e) => setQuickLog(e.target.value)}
-              />
-              <button type="submit" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
-                <SendHorizonal size={20} strokeWidth={2} />
-              </button>
-              {/* Botón de expandir chat eliminado */}
+      {/* Quick Log Input y Sugerencias - Ahora flotante */}
+      <div className="fixed bottom-[15%] left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col-reverse gap-6"> {/* Añadido flex-col-reverse y gap-6 */}
+        <form onSubmit={handleQuickLog} className="relative group">
+          <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
+          <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
+            <div className="pl-4 text-slate-500">
+              {isProcessingAI ? <Loader2 size={20} className="animate-spin" /> : <RotateCcw size={20} />}
             </div>
-          </form>
-
-          <div className="space-y-4">
-            {suggestions.map((suggestion, idx) => (
-              <InsightCard 
-                key={idx}
-                suggestion={suggestion}
-                onAccept={saveHabit}
-                onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
-              />
-            ))}
+            <input 
+              type="text" 
+              placeholder="Feed protocol data..." 
+              className="w-full bg-transparent p-4 outline-none text-white font-medium placeholder:text-slate-600"
+              value={quickLog}
+              onChange={(e) => setQuickLog(e.target.value)}
+            />
+            <button type="submit" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
+              <SendHorizonal size={20} strokeWidth={2} />
+            </button>
           </div>
-        </section>
+        </form>
+
+        <div className="space-y-4"> {/* Este div ahora está encima del formulario */}
+          {suggestions.map((suggestion, idx) => (
+            <InsightCard 
+              key={idx}
+              suggestion={suggestion}
+              onAccept={saveHabit}
+              onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
+            />
+          ))}
+        </div>
       </div>
 
       <main className="pt-28 px-6 space-y-8">
