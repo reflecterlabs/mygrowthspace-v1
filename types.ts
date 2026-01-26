@@ -1,9 +1,8 @@
-
 export interface Habit {
   id: string;
   name: string;
   category: 'Health' | 'Mindset' | 'Productivity' | 'Finance' | 'Social';
-  frequency: 'daily' | 'weekly';
+  frequency: 'daily' | 'weekly' | 'one-time'; // Añadido 'one-time'
   daysOfWeek: number[]; // 0-6 (Sunday-Saturday)
   time?: string; // HH:mm format
   description?: string;
@@ -15,6 +14,7 @@ export interface Habit {
   endDate?: string; // ISO date string
   specificDates?: string[]; // Array of YYYY-MM-DD strings
   isOneTime?: boolean;
+  lastCompletedDate?: string | null; // Añadido para consistencia
 }
 
 export interface UserProfile {

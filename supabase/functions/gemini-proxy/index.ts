@@ -124,15 +124,18 @@ serve(async (req: any) => {
         First, identify the language of the user input. Then, return all suggested card details (title, description, actionLabel, and habit payload details) in the identified language.
         
         CRITICAL SCHEDULING RULES:
-        - If user mentions a specific date like "Feb 5", "tomorrow", or "next Friday", calculate that date precisely for the year ${currentYear}.
-        - For specific events (meetings, visits, appointments):
+        - If user mentions a specific date like "Feb 5", "tomorrow", or "next Friday", or a specific event, calculate that date precisely for the year ${currentYear}.
+        - For specific events (meetings, visits, appointments) or single-day habits:
           * ALWAYS set 'isOneTime': true
+          * ALWAYS set 'frequency': 'one-time'
           * ALWAYS set 'specificDates': ["YYYY-MM-DD"] with the calculated date.
           * ALWAYS set 'daysOfWeek': [] (empty array).
           * Set 'type' of suggestedAction to 'create_habit'.
         - For recurring habits:
           * set 'isOneTime': false
+          * set 'frequency': 'daily' or 'weekly'
           * set 'daysOfWeek': [0-6] based on the pattern.
+          * 'specificDates' should be an empty array.
         
         Return as JSON array of SuggestedCard. The suggestedAction.type MUST be 'create_habit'.
         
@@ -162,7 +165,7 @@ serve(async (req: any) => {
                         properties: {
                           name: { type: Type.STRING },
                           category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
-                          frequency: { type: Type.STRING, enum: ['daily', 'weekly'] }, // <--- Modificado aquí
+                          frequency: { type: Type.STRING, enum: ['daily', 'weekly', 'one-time'] }, // <--- Modificado aquí
                           daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } },
                           specificDates: { type: Type.ARRAY, items: { type: Type.STRING } },
                           isOneTime: { type: Type.BOOLEAN },

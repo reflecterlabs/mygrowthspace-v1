@@ -19,6 +19,69 @@ import BottomNavBar from './components/BottomNavBar';
 import { supabase } from './src/integrations/supabase/client';
 import { Habit, UserProfile } from './types';
 import { generateSuggestedCards } from './services/geminiService';
+import InsightsPage from './src/pages/InsightsPage'; // Importar la nueva página de Insights
+
+// Helper function for streak calculation (moved outside component for reusability)
+const calculateStreak = (habit: Habit, currentCompletedDates: string[], todayStr: string): { streak: number; lastCompletedDate: string | null } => {
+  const sortedDates = [...currentCompletedDates].sort();
+  if (sortedDates.length === 0) {
+    return { streak: 0, lastCompletedDate: null };
+  }
+
+  if (habit.isOneTime) {
+    // For one-time habits, streak is 1 if completed on the specific date, 0 otherwise.
+    // Assuming specificDates array contains the target date for one-time habits.
+    const targetDate = habit.specificDates?.[0];
+    if (targetDate && currentCompletedDates.includes(targetDate)) {
+      return { streak: 1, lastCompletedDate: targetDate };
+    }
+    return { streak: 0, lastCompletedDate: null };
+  }
+
+  if (habit.frequency === 'daily') {
+    let currentStreak = 0;
+    // let lastDate = null; // Eliminado: 'lastDate' no se utiliza
+    const today = new Date(todayStr);
+    let expectedDate = new Date(today);
+
+    const latestCompletion = sortedDates[sortedDates.length - 1];
+    if (latestCompletion) {
+      const latestCompletionDate = new Date(latestCompletion);
+      const diffDaysFromToday = Math.floor((today.getTime() - latestCompletionDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDaysFromToday === 0) { // Completed today
+        currentStreak = 1;
+        // lastDate = latestCompletion; // Eliminado
+        expectedDate.setDate(expectedDate.getDate() - 1);
+      } else if (diffDaysFromToday === 1) { // Completed yesterday
+        currentStreak = 1;
+        // lastDate = latestCompletion; // Eliminado
+        expectedDate.setDate(expectedDate.getDate() - 2);
+      } else {
+        // Latest completion is older than yesterday, streak is 0
+        return { streak: 0, lastCompletedDate: latestCompletion };
+      }
+
+      for (let i = sortedDates.length - 2; i >= 0; i--) {
+        const prevCompletion = sortedDates[i];
+        const prevCompletionDate = new Date(prevCompletion);
+        
+        if (prevCompletionDate.toISOString().split('T')[0] === expectedDate.toISOString().split('T')[0]) {
+          currentStreak++;
+          expectedDate.setDate(expectedDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    }
+    return { streak: currentStreak, lastCompletedDate: latestCompletion || null };
+  }
+
+  // For 'weekly' habits, a simple streak calculation is more complex and out of scope for this single response.
+  // For now, we'll just return 0 streak for weekly habits.
+  return { streak: 0, lastCompletedDate: sortedDates[sortedDates.length - 1] || null };
+};
+
 
 const App: React.FC = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -94,7 +157,12 @@ const App: React.FC = () => {
               time: h.time_of_day,
               streak: h.streak || 0,
               completedDates: h.completed_dates || [],
-              createdAt: h.created_at || new Date().toISOString()
+              createdAt: h.created_at || new Date().toISOString(),
+              startDate: h.start_date,
+              endDate: h.end_date,
+              specificDates: h.specific_dates || [],
+              isOneTime: h.is_one_time || false,
+              lastCompletedDate: h.last_completed_date
             })));
             setProfileStatus('ready');
           }
@@ -153,11 +221,15 @@ const App: React.FC = () => {
         user_id: user?.id,
         name: habitData.name,
         category: habitData.category,
-        frequency: habitData.frequency || 'daily',
-        days_of_week: habitData.daysOfWeek || [0,1,2,3,4,5,6],
+        frequency: habitData.isOneTime ? 'one-time' : (habitData.frequency || 'daily'), // Ajustado para 'one-time'
+        days_of_week: habitData.daysOfWeek || (habitData.isOneTime ? [] : [0,1,2,3,4,5,6]), // Si es one-time, no hay días de la semana
         time_of_day: habitData.time,
-        start_date: new Date().toISOString().split('T')[0],
-        completed_dates: []
+        start_date: habitData.startDate || new Date().toISOString().split('T')[0], // Usar startDate si está disponible
+        specific_dates: habitData.specificDates || [], // Añadir specific_dates
+        is_one_time: habitData.isOneTime || false, // Añadir is_one_time
+        completed_dates: [],
+        streak: 0, // Inicializar racha a 0
+        last_completed_date: null // Inicializar última fecha de completado a null
       }).select(); // Capturamos los datos insertados
 
       if (insertError) {
@@ -178,9 +250,10 @@ const App: React.FC = () => {
           completedDates: insertedHabit.completed_dates || [],
           createdAt: insertedHabit.created_at || new Date().toISOString(),
           startDate: insertedHabit.start_date,
-          endDate: insertedHabit.end_date, // Corregido el typo aquí
+          endDate: insertedHabit.end_date,
           specificDates: insertedHabit.specific_dates,
-          isOneTime: insertedHabit.is_one_time
+          isOneTime: insertedHabit.is_one_time,
+          lastCompletedDate: insertedHabit.last_completed_date
         };
         setHabits(prev => [...prev, newHabit]); // Actualizamos el estado directamente
       }
@@ -218,7 +291,9 @@ const App: React.FC = () => {
           frequency: h.frequency,
           days_of_week: h.daysOfWeek,
           time_of_day: h.time,
-          completed_dates: []
+          completed_dates: [],
+          streak: 0, // Inicializar racha a 0
+          last_completed_date: null // Inicializar última fecha de completado a null
         }));
         const { error: habitsInsertError } = await supabase.from('habits').insert(habitsToInsert).select();
         if (habitsInsertError) {
@@ -262,21 +337,28 @@ const App: React.FC = () => {
         ? habit.completedDates.filter(d => d !== date)
         : [...habit.completedDates, date];
 
+      // Calcular nueva racha y última fecha de completado
+      const { streak: newStreak, lastCompletedDate: newLastCompletedDate } = calculateStreak(habit, updatedDates, selectedDate);
+
       const originalHabits = habits;
       setHabits(prev =>
         prev.map(h =>
-          h.id === habitId ? { ...h, completedDates: updatedDates } : h
+          h.id === habitId ? { ...h, completedDates: updatedDates, streak: newStreak, lastCompletedDate: newLastCompletedDate } : h
         )
       );
 
       const { error } = await supabase
         .from('habits')
-        .update({ completed_dates: updatedDates })
+        .update({ 
+          completed_dates: updatedDates,
+          streak: newStreak,
+          last_completed_date: newLastCompletedDate
+        })
         .eq('id', habitId);
 
       if (error) {
         console.error('App: Error updating habit completion:', error);
-        setHabits(originalHabits);
+        setHabits(originalHabits); // Revertir si hay error
       }
     } catch (err) {
       console.error('App: Error toggling habit completion:', err);
@@ -361,75 +443,81 @@ const App: React.FC = () => {
         </button>
       </nav>
 
-      <main className="pt-28 px-6 space-y-8">
-        {/* Sección de Perfil de Persona */}
-        <div className="relative bg-gradient-to-br from-blue-600/10 to-cyan-500/10 border border-blue-600/20 rounded-[2.5rem] p-8 flex flex-col gap-8 items-center max-w-3xl mx-auto w-full">
-          <div className="absolute top-6 right-6 text-cyan-500 opacity-20">
-            <UserIcon size={80} strokeWidth={1} />
-          </div>
-          <div className="flex-1 text-center relative z-10">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">PERSON'S MANIFESTO</span>
-            {isEditingStatement ? (
-              <div className="mt-4 space-y-3">
-                <textarea
-                  value={editingStatement}
-                  onChange={(e) => setEditingStatement(e.target.value)}
-                  maxLength={264}
-                  className="w-full bg-white/5 border border-white/20 rounded-2xl p-4 text-white text-sm outline-none focus:border-cyan-500 resize-none font-medium"
-                  rows={5} 
-                  placeholder="Your 264-character identity statement..."
-                />
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500 font-black uppercase">{editingStatement.length}/264</span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setIsEditingStatement(false)}
-                      className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-black text-slate-400 hover:text-white transition-all"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={saveStatement}
-                      className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/50 rounded-xl text-sm font-black text-cyan-400 hover:bg-cyan-500/30 transition-all"
-                    >
-                      Save
-                    </button>
+      {currentView === 'home' ? (
+        <main className="pt-28 px-6 space-y-8">
+          {/* Sección de Perfil de Persona */}
+          <div className="relative bg-gradient-to-br from-blue-600/10 to-cyan-500/10 border border-blue-600/20 rounded-[2.5rem] p-8 flex flex-col gap-8 items-center max-w-3xl mx-auto w-full">
+            <div className="absolute top-6 right-6 text-cyan-500 opacity-20">
+              <UserIcon size={80} strokeWidth={1} />
+            </div>
+            <div className="flex-1 text-center relative z-10">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">PERSON'S MANIFESTO</span>
+              {isEditingStatement ? (
+                <div className="mt-4 space-y-3">
+                  <textarea
+                    value={editingStatement}
+                    onChange={(e) => setEditingStatement(e.target.value)}
+                    maxLength={264}
+                    className="w-full bg-white/5 border border-white/20 rounded-2xl p-4 text-white text-sm outline-none focus:border-cyan-500 resize-none font-medium"
+                    rows={5} 
+                    placeholder="Your 264-character identity statement..."
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-slate-500 font-black uppercase">{editingStatement.length}/264</span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setIsEditingStatement(false)}
+                        className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-black text-slate-400 hover:text-white transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveStatement}
+                        className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/50 rounded-xl text-sm font-black text-cyan-400 hover:bg-cyan-500/30 transition-all"
+                      >
+                        Save
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <button
-                onClick={startEditStatement}
-                className="text-slate-300 italic text-lg hover:text-cyan-400 transition-colors group leading-relaxed"
-              >
-                "{profile?.identityStatement}"
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Carrusel de Fechas */}
-        <div className="max-w-3xl mx-auto w-full">
-          <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
-        </div>
-
-        {/* Lista de Hábitos */}
-        <div className="max-w-3xl mx-auto w-full space-y-6">
-          <div className="space-y-6">
-            <div className="grid gap-2">
-              {habits.length === 0 ? (
-                <div className="p-12 border border-dashed border-white/10 rounded-[2.5rem] text-center text-slate-500">
-                  Your protocol is empty. Use the prompt above to initialize.
-                </div>
               ) : (
-                habits.map(h => (
-                  <HabitCard key={h.id} habit={h} selectedDateStr={selectedDate} onToggle={toggleHabitCompletion} onDelete={deleteHabit} onEdit={editHabit} />
-                ))
+                <button
+                  onClick={startEditStatement}
+                  className="text-slate-300 italic text-lg hover:text-cyan-400 transition-colors group leading-relaxed"
+                >
+                  "{profile?.identityStatement}"
+                </button>
               )}
             </div>
           </div>
+
+          {/* Carrusel de Fechas */}
+          <div className="max-w-3xl mx-auto w-full">
+            <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
+          </div>
+
+          {/* Lista de Hábitos */}
+          <div className="max-w-3xl mx-auto w-full space-y-6">
+            <div className="space-y-6">
+              <div className="grid gap-2">
+                {habits.length === 0 ? (
+                  <div className="p-12 border border-dashed border-white/10 rounded-[2.5rem] text-center text-slate-500">
+                    Your protocol is empty. Use the prompt above to initialize.
+                  </div>
+                ) : (
+                  habits.map(h => (
+                    <HabitCard key={h.id} habit={h} selectedDateStr={selectedDate} onToggle={toggleHabitCompletion} onDelete={deleteHabit} onEdit={editHabit} />
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+      ) : (
+        <div className="pt-28"> {/* Añadir padding para la página de insights */}
+          <InsightsPage habits={habits} />
         </div>
-      </main>
+      )}
 
       {/* Floating Add Habit Button */}
       <button
