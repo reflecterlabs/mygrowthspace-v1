@@ -3,8 +3,7 @@ import {
   User as UserIcon,
   LogOut,
   Loader2,
-  Zap,
-  ChevronRight, 
+  Zap, // Mantener Zap si se usa en otro lugar, pero no para el quick log
   RotateCcw, 
   SendHorizonal, 
   Maximize 
@@ -34,7 +33,7 @@ const App: React.FC = () => {
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const [editingStatement, setEditingStatement] = useState('');
-  const [currentView, setCurrentView] = useState<'home' | 'insights' | 'profile'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
 
   // --- Efectos de React ---
   useEffect(() => {
@@ -338,7 +337,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-28">
       <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
-        <div className="flex flex-col items-start"> {/* Contenedor para el nuevo título */}
+        <div className="flex flex-col items-start">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">CORE PROTOCOL</span>
           <span className="font-black text-2xl tracking-tighter text-white">Identity Hub</span>
         </div>
@@ -347,7 +346,45 @@ const App: React.FC = () => {
         </button>
       </nav>
 
-      <main className="pt-28 px-6 space-y-8">
+      {/* Quick Log Input - Ahora flotante */}
+      <div className="fixed top-1/4 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30">
+        <section className="w-full space-y-6">
+          <form onSubmit={handleQuickLog} className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
+            <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
+              <div className="pl-4 text-slate-500">
+                {isProcessingAI ? <Loader2 size={20} className="animate-spin" /> : <RotateCcw size={20} />} {/* Usando RotateCcw aquí */}
+              </div>
+              <input 
+                type="text" 
+                placeholder="Feed protocol data..." 
+                className="w-full bg-transparent p-4 outline-none text-white font-medium placeholder:text-slate-600"
+                value={quickLog}
+                onChange={(e) => setQuickLog(e.target.value)}
+              />
+              <button type="submit" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
+                <SendHorizonal size={20} strokeWidth={2} />
+              </button>
+              <button type="button" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
+                <Maximize size={20} strokeWidth={2} />
+              </button>
+            </div>
+          </form>
+
+          <div className="space-y-4">
+            {suggestions.map((suggestion, idx) => (
+              <InsightCard 
+                key={idx}
+                suggestion={suggestion}
+                onAccept={saveHabit}
+                onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <main className="pt-[28rem] px-6 space-y-8"> {/* Ajustado el padding-top */}
         {/* Sección de Perfil de Persona */}
         <div className="relative bg-gradient-to-br from-blue-600/10 to-cyan-500/10 border border-blue-600/20 rounded-[2.5rem] p-8 flex flex-col gap-8 items-center max-w-3xl mx-auto w-full">
           <div className="absolute top-6 right-6 text-cyan-500 opacity-20">
@@ -399,42 +436,6 @@ const App: React.FC = () => {
           <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
         </div>
 
-        {/* Quick Log Input */}
-        <section className="max-w-3xl mx-auto w-full space-y-6">
-          <form onSubmit={handleQuickLog} className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
-            <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
-              <div className="pl-4 text-slate-500">
-                <RotateCcw size={20} />
-              </div>
-              <input 
-                type="text" 
-                placeholder="Feed protocol data..." 
-                className="w-full bg-transparent p-4 outline-none text-white font-medium placeholder:text-slate-600"
-                value={quickLog}
-                onChange={(e) => setQuickLog(e.target.value)}
-              />
-              <button type="submit" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
-                <SendHorizonal size={20} strokeWidth={2} />
-              </button>
-              <button type="button" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
-                <Maximize size={20} strokeWidth={2} />
-              </button>
-            </div>
-          </form>
-
-          <div className="space-y-4">
-            {suggestions.map((suggestion, idx) => (
-              <InsightCard 
-                key={idx}
-                suggestion={suggestion}
-                onAccept={saveHabit}
-                onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
-              />
-            ))}
-          </div>
-        </section>
-
         {/* Lista de Hábitos */}
         <div className="max-w-3xl mx-auto w-full space-y-6">
           <div className="space-y-6">
@@ -460,7 +461,6 @@ const App: React.FC = () => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onInsightsClick={() => setCurrentView('insights')}
-        onProfileClick={() => setCurrentView('profile')}
       />
 
       <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />

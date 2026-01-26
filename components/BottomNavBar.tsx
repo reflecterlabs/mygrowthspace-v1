@@ -1,24 +1,20 @@
 import React from 'react';
-import { LayoutGrid, BarChart2, User } from 'lucide-react'; // Iconos actualizados
+import { LayoutGrid, BarChart2 } from 'lucide-react'; // Iconos actualizados, User eliminado
 
 interface BottomNavBarProps {
-  onAddClick?: () => void; // Ahora opcional, ya que el botón central se elimina
   onHomeClick?: () => void;
   onInsightsClick?: () => void;
-  onProfileClick?: () => void;
-  currentView?: 'home' | 'insights' | 'profile';
+  currentView?: 'home' | 'insights'; // 'profile' eliminado
 }
 
 const BottomNavBar: React.FC<BottomNavBarProps> = ({
   onHomeClick,
   onInsightsClick,
-  onProfileClick,
   currentView = 'home'
 }) => {
   const navItems = [
-    { id: 'home', label: 'Home', icon: LayoutGrid, onClick: onHomeClick }, // Icono de cuadrícula
-    { id: 'insights', label: 'Insights', icon: BarChart2, onClick: onInsightsClick }, // Icono de gráfico de barras
-    { id: 'profile', label: 'Profile', icon: User, onClick: onProfileClick } // Icono de usuario
+    { id: 'home', label: 'Calendar', icon: LayoutGrid, onClick: onHomeClick }, // Icono de cuadrícula para Calendar
+    { id: 'insights', label: 'Metrics', icon: BarChart2, onClick: onInsightsClick }, // Icono de gráfico de barras para Metrics
   ];
 
   return (
