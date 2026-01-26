@@ -354,7 +354,7 @@ const App: React.FC = () => {
       <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex flex-col items-start">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">My Growth Space</span>
-          <span className="font-black text-[26px] tracking-tighter text-white">{profile?.name || 'Guest'}</span> {/* Ajustado el tamaño de fuente aquí */}
+          <span className="font-black text-[26px] tracking-tighter text-white">{profile?.name || 'Guest'}</span>
         </div>
         <button onClick={() => signOut()} className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center hover:text-red-400 transition-all">
           <LogOut size={18} />
@@ -368,7 +368,7 @@ const App: React.FC = () => {
             <UserIcon size={80} strokeWidth={1} />
           </div>
           <div className="flex-1 text-center relative z-10">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">PERSONA MANIFEST</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">PERSON'S MANIFESTO</span>
             {isEditingStatement ? (
               <div className="mt-4 space-y-3">
                 <textarea
