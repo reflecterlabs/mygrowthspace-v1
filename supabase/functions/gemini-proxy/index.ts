@@ -87,7 +87,7 @@ serve(async (req: any) => {
                     type: Type.OBJECT,
                     properties: {
                       name: { type: Type.STRING },
-                      category: { type: Type.ENUM, enum: ALLOWED_CATEGORIES }, // Usar Type.ENUM
+                      category: { type: Type.STRING, enum: ALLOWED_CATEGORIES }, // Corregido: Type.STRING antes de enum
                       time: { type: Type.STRING },
                       description: { type: Type.STRING },
                       daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } }
@@ -161,7 +161,7 @@ serve(async (req: any) => {
                         type: Type.OBJECT,
                         properties: {
                           name: { type: Type.STRING },
-                          category: { type: Type.ENUM, enum: ALLOWED_CATEGORIES }, // Usar Type.ENUM
+                          category: { type: Type.STRING, enum: ALLOWED_CATEGORIES }, // Corregido: Type.STRING antes de enum
                           frequency: { type: Type.STRING },
                           daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } },
                           specificDates: { type: Type.ARRAY, items: { type: Type.STRING } },
