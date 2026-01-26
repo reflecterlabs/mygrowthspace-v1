@@ -335,7 +335,7 @@ const App: React.FC = () => {
   console.log("App: Renderizando contenido principal. Perfil:", profile, "Hábitos:", habits);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-28">
+    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-48"> {/* Cambiado de pb-28 a pb-48 */}
       <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex flex-col items-start">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">CORE PROTOCOL</span>
