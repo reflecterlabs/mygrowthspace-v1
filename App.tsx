@@ -145,6 +145,8 @@ const App: React.FC = () => {
       if (selectErr) console.error('App: Error checking existing habit:', selectErr);
 
       if (existing) {
+        // Si el hábito ya existe, simplemente lo ignoramos o mostramos un mensaje.
+        // Por ahora, solo lo filtramos de las sugerencias si venía de ahí.
         setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
         return;
       }
@@ -165,10 +167,13 @@ const App: React.FC = () => {
         return;
       }
 
+      // Eliminar la sugerencia después de aceptarla
       setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
       setIsModalOpen(false);
+      
+      // Forzar una recarga de hábitos para mostrar el nuevo
       if (user) {
-        setProfileStatus('loading');
+        setProfileStatus('loading'); // Esto disparará el useEffect para recargar datos
       }
     } catch (err) {
       console.error('App: Error saving habit:', err);
@@ -398,20 +403,6 @@ const App: React.FC = () => {
           <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
         </div>
 
-        {/* Sugerencias de la IA (ahora dentro del main content) */}
-        {suggestions.length > 0 && (
-          <div className="max-w-3xl mx-auto w-full space-y-4">
-            {suggestions.map((suggestion, idx) => (
-              <InsightCard 
-                key={idx}
-                suggestion={suggestion}
-                onAccept={saveHabit}
-                onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
-              />
-            ))}
-          </div>
-        )}
-
         {/* Lista de Hábitos */}
         <div className="max-w-3xl mx-auto w-full space-y-6">
           <div className="space-y-6">
@@ -430,8 +421,20 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Quick Log Input (ahora fijo en la parte inferior) */}
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30"> {/* Ajustado a bottom-20 */}
+      {/* Quick Log Input y Sugerencias (ahora flotante en la parte inferior) */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4"> {/* flex-col para apilar sugerencias arriba del input */}
+        {suggestions.length > 0 && (
+          <div className="space-y-4">
+            {suggestions.map((suggestion, idx) => (
+              <InsightCard 
+                key={idx}
+                suggestion={suggestion}
+                onAccept={saveHabit} // La funcionalidad ya está en saveHabit
+                onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
+              />
+            ))}
+          </div>
+        )}
         <form onSubmit={handleQuickLog} className="relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
           <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
