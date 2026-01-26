@@ -170,8 +170,9 @@ const App: React.FC = () => {
       const { error: profileUpsertError } = await supabase.from('user_profiles').upsert({
         user_id: user?.id,
         name: newProfile.name,
-        email: newProfile.email, // <-- Añadido el email aquí
+        email: newProfile.email,
         identity_statement: newProfile.identityStatement,
+        focus_areas: newProfile.focusAreas, // <-- Añadido el campo focus_areas aquí
         has_completed_onboarding: true
       }, { onConflict: 'user_id' });
 
