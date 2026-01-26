@@ -6,17 +6,32 @@ interface DateCarouselProps {
   onDateChange: (date: string) => void;
 }
 
+// Helper para obtener YYYY-MM-DD en hora local de un objeto Date
+const getLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper para crear un objeto Date a partir de una cadena YYYY-MM-DD, interpretado como hora local
+const createLocalDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  // Month es 0-indexado en el constructor de Date
+  return new Date(year, month - 1, day); 
+};
+
 const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange }) => {
-  const generateDateRange = (centerDate: string, range: number = 3) => {
+  const generateDateRange = (centerDateStr: string, range: number = 3) => {
     const dates: { date: string; label: string; dayName: string }[] = [];
-    const center = new Date(centerDate);
+    const center = createLocalDate(centerDateStr); // Usar la función para crear fecha local
 
     for (let i = -range; i <= range; i++) {
-      const date = new Date(center);
+      const date = new Date(center); // Clonar la fecha para no modificar la original
       date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = getLocalDateString(date); // Obtener la cadena de fecha local
       const dayIndex = date.getDay();
-      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']; // Nombres de días en español
       const dayName = dayNames[dayIndex];
       const dayNum = date.getDate();
 
@@ -31,18 +46,18 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
   };
 
   const handlePrevDay = () => {
-    const prev = new Date(selectedDate);
+    const prev = createLocalDate(selectedDate);
     prev.setDate(prev.getDate() - 1);
-    onDateChange(prev.toISOString().split('T')[0]);
+    onDateChange(getLocalDateString(prev));
   };
 
   const handleNextDay = () => {
-    const next = new Date(selectedDate);
+    const next = createLocalDate(selectedDate);
     next.setDate(next.getDate() + 1);
-    onDateChange(next.toISOString().split('T')[0]);
+    onDateChange(getLocalDateString(next));
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString(new Date()); // Obtener la fecha de hoy en hora local
   const dates = generateDateRange(selectedDate, 3);
 
   return (
@@ -78,7 +93,7 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
                 {d.label}
               </span>
               {isToday && (
-                <span className="text-[8px] font-black text-orange-500 uppercase mt-0.5">TODAY</span>
+                <span className="text-[8px] font-black text-orange-500 uppercase mt-0.5">HOY</span>
               )}
             </button>
           );
