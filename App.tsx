@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  User as UserIcon,
-  LogOut,
+  User as UserIcon, // Usaremos este icono para abrir el modal de perfil
+  // LogOut, // Eliminado: Se movió dentro del modal
   Loader2,
   Zap,
   RotateCcw, 
@@ -16,6 +16,7 @@ import AddHabitModal from './components/AddHabitModal';
 import InsightCard from './components/InsightCard';
 import DateCarousel from './components/DateCarousel';
 import BottomNavBar from './components/BottomNavBar';
+import UserProfileModal from './src/components/UserProfileModal'; // Importar el nuevo modal
 import { supabase } from './src/integrations/supabase/client';
 import { Habit, UserProfile } from './types';
 import { generateSuggestedCards } from './services/geminiService';
@@ -94,7 +95,7 @@ const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: n
 
 
 const App: React.FC = () => {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut, session } = useAuth(); // Añadir 'session' aquí
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'onboarding' | 'ready' | 'error'>('idle');
@@ -107,6 +108,7 @@ const App: React.FC = () => {
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const [editingStatement, setEditingStatement] = useState('');
   const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false); // Nuevo estado para el modal de perfil
 
   // --- Efectos de React ---
   useEffect(() => {
@@ -399,6 +401,77 @@ const App: React.FC = () => {
     }
   };
 
+  // --- Nuevas funciones para el UserProfileModal ---
+  const handleUpdateProfileName = async (newName: string) => {
+    if (!user || !profile) return;
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ name: newName })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setProfile(prev => prev ? { ...prev, name: newName } : null);
+    } catch (error) {
+      console.error("App: Error updating profile name:", error);
+      // Optionally show a toast notification
+    }
+  };
+
+  const handleDownloadUserData = () => {
+    if (!user || !profile) return;
+
+    const userData = {
+      profile: profile,
+      habits: habits,
+      // Add any other data you want to include
+    };
+
+    const jsonString = JSON.stringify(userData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `my-growth-space-data-${user.id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user || !session || !user.email) { // Asegurarse de que 'session' esté disponible
+      console.error("App: No user, session, or user email available for deletion.");
+      return;
+    }
+
+    try {
+      // Call the Edge Function to delete the user
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`, // Usar session.access_token
+        },
+      });
+
+      if (error) {
+        console.error("App: Error invoking delete-user function:", error);
+        throw error;
+      }
+
+      console.log("App: User account deleted successfully:", data);
+      await signOut(); // Sign out the user after deletion
+      setIsProfileModalOpen(false);
+    } catch (error) {
+      console.error("App: Error deleting account:", error);
+      // Optionally show a toast notification
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    setIsProfileModalOpen(false);
+  };
+
   // --- Lógica de renderizado condicional ---
 
   if (authLoading || profileStatus === 'loading') {
@@ -450,8 +523,12 @@ const App: React.FC = () => {
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">My Growth Space</span>
           <span className="font-black text-[26px] tracking-tighter text-white">{profile?.name || 'Guest'}</span>
         </div>
-        <button onClick={() => signOut()} className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center hover:text-red-400 transition-all">
-          <LogOut size={18} />
+        {/* Botón de perfil de usuario */}
+        <button 
+          onClick={() => setIsProfileModalOpen(true)} 
+          className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center hover:text-cyan-400 transition-all"
+        >
+          <UserIcon size={18} />
         </button>
       </nav>
 
@@ -610,6 +687,19 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {profile && (
+        <UserProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          userProfile={profile}
+          // habits={habits} // Ya no se pasa aquí
+          onUpdateProfile={handleUpdateProfileName}
+          onDownloadData={handleDownloadUserData}
+          onDeleteAccount={handleDeleteAccount}
+          onLogout={handleLogout}
+        />
       )}
     </div>
   );
