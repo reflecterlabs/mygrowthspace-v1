@@ -6,7 +6,7 @@ import {
   Zap,
   RotateCcw, 
   SendHorizonal, 
-  // Maximize // Eliminado de las importaciones
+  Plus // Importar el icono Plus
 } from 'lucide-react';
 import { useAuth } from './src/components/AuthProvider';
 import Login from './src/pages/Login';
@@ -33,7 +33,7 @@ const App: React.FC = () => {
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const [editingStatement, setEditingStatement] = useState('');
-  const [currentView, setCurrentView] = useState<'home' | 'insights' | 'profile'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'insights'>('home'); // 'profile' eliminado del tipo
 
   // --- Efectos de React ---
   useEffect(() => {
@@ -187,7 +187,6 @@ const App: React.FC = () => {
 
       setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
       setIsModalOpen(false);
-      // Eliminado: setProfileStatus('loading'); ya no es necesario aquí.
       
     } catch (err) {
       console.error('App: Error saving habit:', err);
@@ -228,8 +227,6 @@ const App: React.FC = () => {
         }
       }
 
-      // Después de guardar el perfil y los hábitos, forzamos una recarga completa
-      // para asegurar que todos los datos (incluyendo IDs de Supabase) estén sincronizados.
       setProfileStatus('loading'); 
     } catch (error) {
       console.error("App: Error general al guardar datos de onboarding:", error);
@@ -434,6 +431,14 @@ const App: React.FC = () => {
         </div>
       </main>
 
+      {/* Floating Add Habit Button */}
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 w-16 h-16 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-all active:scale-95 drop-shadow-[0_0_20px_rgba(6,182,212,0.5)]"
+      >
+        <Plus size={32} strokeWidth={3} />
+      </button>
+
       {/* Quick Log Input y Sugerencias (ahora flotante en la parte inferior) */}
       <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4"> {/* flex-col para apilar sugerencias arriba del input */}
         {suggestions.length > 0 && (
@@ -475,7 +480,6 @@ const App: React.FC = () => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onInsightsClick={() => setCurrentView('insights')}
-        onProfileClick={() => setCurrentView('profile')} 
       />
 
       <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />

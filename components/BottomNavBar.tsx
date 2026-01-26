@@ -1,23 +1,20 @@
 import React from 'react';
-import { LayoutGrid, BarChart2, User } from 'lucide-react'; // Iconos actualizados, User re-añadido
+import { LayoutGrid, BarChart2 } from 'lucide-react'; // Iconos actualizados, User eliminado
 
 interface BottomNavBarProps {
   onHomeClick?: () => void;
   onInsightsClick?: () => void;
-  onProfileClick?: () => void; // Re-añadido
-  currentView?: 'home' | 'insights' | 'profile'; // Re-añadido 'profile'
+  currentView?: 'home' | 'insights'; // 'profile' eliminado del tipo
 }
 
 const BottomNavBar: React.FC<BottomNavBarProps> = ({
   onHomeClick,
   onInsightsClick,
-  onProfileClick, // Re-añadido
   currentView = 'home'
 }) => {
   const navItems = [
     { id: 'home', label: 'Calendar', icon: LayoutGrid, onClick: onHomeClick }, // Icono de cuadrícula para Calendar
     { id: 'insights', label: 'Metrics', icon: BarChart2, onClick: onInsightsClick }, // Icono de gráfico de barras para Metrics
-    { id: 'profile', label: 'Profile', icon: User, onClick: onProfileClick } // Icono de usuario re-añadido
   ];
 
   return (
@@ -42,10 +39,6 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 strokeWidth={2}
                 className={'group-hover:drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]'}
               />
-              {/* Eliminado el texto de la etiqueta para que coincida con la imagen */}
-              {/* <span className={`text-[9px] font-black uppercase tracking-widest mt-1`}>
-                {item.label}
-              </span> */}
             </button>
           );
         })}
