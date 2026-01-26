@@ -130,7 +130,7 @@ const App: React.FC = () => {
         time_of_day: habitData.time,
         start_date: new Date().toISOString().split('T')[0],
         completed_dates: []
-      });
+      }).select(); // Añadido .select() aquí
 
       if (insertError) {
         console.error('Error inserting habit:', insertError);
@@ -153,7 +153,7 @@ const App: React.FC = () => {
         name: newProfile.name,
         identity_statement: newProfile.identityStatement,
         has_completed_onboarding: true
-      }, { onConflict: 'user_id' }); // <--- CAMBIO AQUÍ: Especificar onConflict en user_id
+      }, { onConflict: 'user_id' });
 
       if (newHabits.length > 0) {
         const habitsToInsert = newHabits.map(h => ({
@@ -165,7 +165,7 @@ const App: React.FC = () => {
           time_of_day: h.time,
           completed_dates: []
         }));
-        await supabase.from('habits').insert(habitsToInsert);
+        await supabase.from('habits').insert(habitsToInsert).select(); // Añadido .select() aquí
       }
 
       setShowOnboarding(false);
