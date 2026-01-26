@@ -8,17 +8,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req: any) => { // req tipado como 'any'
+serve(async (req: any) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { action, payload } = await req.json(); // Movido al inicio del bloque try
+    const { action, payload } = await req.json();
     console.log("[gemini-proxy] Received action:", action, "with payload:", payload);
 
     // @ts-ignore
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY"); // Ignorando 'Deno'
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
       console.error("[gemini-proxy] GEMINI_API_KEY is not set in environment variables.");
       return new Response(JSON.stringify({ error: "GEMINI_API_KEY not configured" }), {
@@ -32,6 +32,7 @@ serve(async (req: any) => { // req tipado como 'any'
     let result;
     switch (action) {
       case 'getDailyInspiration':
+        // Mantener en inglés ya que es una cita motivacional general
         result = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
           contents: `Give me a daily motivational quote and a small actionable "atomic habit" step based on James Clear's principles for someone focusing on ${payload.userFocus}. Return it in JSON format in English.`,
@@ -52,6 +53,7 @@ serve(async (req: any) => { // req tipado como 'any'
         break;
 
       case 'analyzeHabitProgress':
+        // Mantener en inglés ya que es un insight general
         result = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
           contents: `Review my current habits and completion data: ${JSON.stringify(payload.habits)}. 
@@ -62,14 +64,15 @@ serve(async (req: any) => { // req tipado como 'any'
 
       case 'parseRoutineIntoHabits':
         const parseRoutinePrompt = `Analyze this routine narrative: "${payload.narrative}". 
+          First, identify the language of the narrative.
           1. Extract a list of atomic habits. For each, identify: name, category (Health, Mindset, Productivity, Finance, Social), time (HH:mm if mentioned), description, and daysOfWeek (array 0-6).
           2. Create a one-sentence "Identity Statement" (e.g. "I am a person who...") based on these actions.
-          Return as JSON in English.`;
+          Return all habit details and the identity statement in the identified language, in JSON format.`;
         
         console.log("[gemini-proxy] Sending prompt to Gemini for parseRoutineIntoHabits:", parseRoutinePrompt);
 
         const geminiResponse = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview', // Cambiado de 'gemini-3-pro-preview' a 'gemini-3-flash-preview'
+          model: 'gemini-3-flash-preview',
           contents: parseRoutinePrompt,
           config: {
             responseMimeType: "application/json",
@@ -115,7 +118,8 @@ serve(async (req: any) => { // req tipado como 'any'
         const currentYear = today.getFullYear();
         
         const prompt = `User Input: "${payload.logText}". Current Date Context: Today is ${todayStr}.
-        Task: Suggest specific "Atomic Habit" optimizations or NEW scheduled events/habits. Return results in English.
+        Task: Suggest specific "Atomic Habit" optimizations or NEW scheduled events/habits.
+        First, identify the language of the user input. Then, return all suggested card details (title, description, actionLabel, and habit payload details) in the identified language.
         
         CRITICAL SCHEDULING RULES:
         - If user mentions a specific date like "Feb 5", "tomorrow", or "next Friday", calculate that date precisely for the year ${currentYear}.
@@ -192,7 +196,7 @@ serve(async (req: any) => { // req tipado como 'any'
 
   } catch (error) {
     console.error("[gemini-proxy] Error processing request:", error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), { // Aserción de tipo para 'error.message'
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
