@@ -22,7 +22,8 @@ const createLocalDate = (dateString: string): Date => {
 };
 
 const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange }) => {
-  const generateDateRange = (centerDateStr: string, range: number = 3) => {
+  // Aumentamos el rango a 4 para mostrar 9 días en total (4 antes, el central, 4 después)
+  const generateDateRange = (centerDateStr: string, range: number = 4) => { 
     const dates: { date: string; label: string; dayName: string }[] = [];
     const center = createLocalDate(centerDateStr); // Usar la función para crear fecha local
 
@@ -58,7 +59,7 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
   };
 
   const today = getLocalDateString(new Date()); // Obtener la fecha de hoy en hora local
-  const dates = generateDateRange(selectedDate, 3);
+  const dates = generateDateRange(selectedDate); // Ahora generará 9 días por defecto
 
   return (
     <div className="flex items-center gap-3 bg-white/5 rounded-[2.5rem] p-4 border border-white/10 w-full">
