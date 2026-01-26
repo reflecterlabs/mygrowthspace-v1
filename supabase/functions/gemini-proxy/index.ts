@@ -69,7 +69,7 @@ serve(async (req: any) => { // req tipado como 'any'
         console.log("[gemini-proxy] Sending prompt to Gemini for parseRoutineIntoHabits:", parseRoutinePrompt);
 
         const geminiResponse = await ai.models.generateContent({
-          model: 'gemini-3-pro-preview',
+          model: 'gemini-3-flash-preview', // Cambiado de 'gemini-3-pro-preview' a 'gemini-3-flash-preview'
           contents: parseRoutinePrompt,
           config: {
             responseMimeType: "application/json",
