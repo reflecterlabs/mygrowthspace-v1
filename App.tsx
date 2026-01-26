@@ -335,7 +335,7 @@ const App: React.FC = () => {
   console.log("App: Renderizando contenido principal. Perfil:", profile, "Hábitos:", habits);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-56">
+    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-64"> {/* Aumentado a pb-64 */}
       <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex flex-col items-start">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">CORE PROTOCOL</span>
@@ -345,39 +345,6 @@ const App: React.FC = () => {
           <LogOut size={18} />
         </button>
       </nav>
-
-      {/* Quick Log Input y Sugerencias - Ahora flotante */}
-      <div className="fixed bottom-[15%] left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col-reverse gap-6"> {/* Añadido flex-col-reverse y gap-6 */}
-        <form onSubmit={handleQuickLog} className="relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
-          <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
-            <div className="pl-4 text-slate-500">
-              {isProcessingAI ? <Loader2 size={20} className="animate-spin" /> : <RotateCcw size={20} />}
-            </div>
-            <input 
-              type="text" 
-              placeholder="Feed protocol data..." 
-              className="w-full bg-transparent p-4 outline-none text-white font-medium placeholder:text-slate-600"
-              value={quickLog}
-              onChange={(e) => setQuickLog(e.target.value)}
-            />
-            <button type="submit" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
-              <SendHorizonal size={20} strokeWidth={2} />
-            </button>
-          </div>
-        </form>
-
-        <div className="space-y-4"> {/* Este div ahora está encima del formulario */}
-          {suggestions.map((suggestion, idx) => (
-            <InsightCard 
-              key={idx}
-              suggestion={suggestion}
-              onAccept={saveHabit}
-              onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
-            />
-          ))}
-        </div>
-      </div>
 
       <main className="pt-28 px-6 space-y-8">
         {/* Sección de Perfil de Persona */}
@@ -431,6 +398,20 @@ const App: React.FC = () => {
           <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
         </div>
 
+        {/* Sugerencias de la IA (ahora dentro del main content) */}
+        {suggestions.length > 0 && (
+          <div className="max-w-3xl mx-auto w-full space-y-4">
+            {suggestions.map((suggestion, idx) => (
+              <InsightCard 
+                key={idx}
+                suggestion={suggestion}
+                onAccept={saveHabit}
+                onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
+              />
+            ))}
+          </div>
+        )}
+
         {/* Lista de Hábitos */}
         <div className="max-w-3xl mx-auto w-full space-y-6">
           <div className="space-y-6">
@@ -448,6 +429,28 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Quick Log Input (ahora fijo en la parte inferior) */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30"> {/* Ajustado a bottom-20 */}
+        <form onSubmit={handleQuickLog} className="relative group">
+          <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
+          <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
+            <div className="pl-4 text-slate-500">
+              {isProcessingAI ? <Loader2 size={20} className="animate-spin" /> : <RotateCcw size={20} />}
+            </div>
+            <input 
+              type="text" 
+              placeholder="Feed protocol data..." 
+              className="w-full bg-transparent p-4 outline-none text-white font-medium placeholder:text-slate-600"
+              value={quickLog}
+              onChange={(e) => setQuickLog(e.target.value)}
+            />
+            <button type="submit" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
+              <SendHorizonal size={20} strokeWidth={2} />
+            </button>
+          </div>
+        </form>
+      </div>
 
       <BottomNavBar 
         currentView={currentView}

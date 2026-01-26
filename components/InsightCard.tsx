@@ -13,7 +13,7 @@ const InsightCard: React.FC<Props> = ({ suggestion, onAccept, onReject }) => {
     // prefer explicit suggestedAction.payload (AI schema), fall back to legacy payload
     (suggestion as any).suggestedAction?.payload || (suggestion as any).payload;
   return (
-    <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 mb-6 animate-in slide-in-from-top duration-500"> {/* Cambiado el background y el borde */}
+    <div className="bg-gray-900 border border-white/10 rounded-[2.5rem] p-6 mb-6 animate-in slide-in-from-top duration-500"> {/* Cambiado a bg-gray-900 para un fondo sólido */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-2 text-cyan-400">
           <Sparkles size={18} />
