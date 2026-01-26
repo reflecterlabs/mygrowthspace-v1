@@ -34,14 +34,13 @@ const App: React.FC = () => {
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const [editingStatement, setEditingStatement] = useState('');
   const [currentView, setCurrentView] = useState<'home' | 'insights' | 'profile'>('home');
-  const [isAppReady, setIsAppReady] = useState(false);
+  const [profileDataFetched, setProfileDataFetched] = useState(false);
 
   // --- Funciones de manejo de datos y eventos ---
 
-  // Mover loadUserData fuera del useEffect para que sea accesible globalmente en el componente
   const loadUserData = async () => {
     console.log("App: Iniciando loadUserData...");
-    setIsAppReady(false);
+    setProfileDataFetched(false);
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
@@ -51,28 +50,23 @@ const App: React.FC = () => {
 
       if (profileError) {
         console.error("App: Error al obtener datos del perfil:", profileError);
-        setProfile(null);
-        setHabits([]);
-        setShowOnboarding(true);
-        return;
+        throw profileError;
       }
       
       if (!profileData || profileData.has_completed_onboarding === false) {
         console.log("App: Perfil no encontrado o onboarding incompleto. Mostrando onboarding.");
-        setProfile(null);
-        setHabits([]);
         setShowOnboarding(true);
+        setProfile(null);
       } else {
         console.log("App: Perfil de usuario cargado:", profileData);
-        const loadedProfile: UserProfile = {
-          name: profileData.name || user?.email || 'Usuario', 
-          email: profileData.email || user?.email || '', 
-          isPremium: profileData.is_premium || false,
-          identityStatement: profileData.identity_statement || 'Estoy forjando mi nuevo yo.', 
-          focusAreas: profileData.focus_areas || [],
-          narrative: profileData.narrative || ''
-        };
-        setProfile(loadedProfile);
+        setProfile({
+          name: profileData.name,
+          email: profileData.email,
+          isPremium: profileData.is_premium,
+          identityStatement: profileData.identity_statement,
+          focusAreas: profileData.focus_areas,
+          narrative: profileData.narrative
+        });
         setShowOnboarding(false);
         
         const { data: habitsData, error: habitsError } = await supabase
@@ -82,43 +76,32 @@ const App: React.FC = () => {
 
         if (habitsError) {
           console.error("App: Error al obtener datos de hábitos:", habitsError);
-          setHabits([]);
-        } else {
-          console.log("App: Hábitos cargados:", habitsData);
-          setHabits((habitsData || []).map(h => ({
-            id: h.id,
-            name: h.name,
-            category: h.category,
-            frequency: h.frequency,
-            daysOfWeek: h.days_of_week || [],
-            time: h.time_of_day,
-            streak: h.streak || 0,
-            completedDates: h.completed_dates || [],
-            createdAt: h.created_at || new Date().toISOString()
-          })));
+          throw habitsError;
         }
+        
+        console.log("App: Hábitos cargados:", habitsData);
+        setHabits((habitsData || []).map(h => ({
+          id: h.id,
+          name: h.name,
+          category: h.category,
+          frequency: h.frequency,
+          daysOfWeek: h.days_of_week || [],
+          time: h.time_of_day,
+          streak: h.streak || 0,
+          completedDates: h.completed_dates || [],
+          createdAt: h.created_at || new Date().toISOString()
+        })));
       }
     } catch (error) {
-      console.error("App: Error inesperado en loadUserData:", error);
+      console.error("App: Error general en loadUserData:", error);
       setProfile(null); 
       setHabits([]);
       setShowOnboarding(true);
     } finally {
       console.log("App: loadUserData finalizado.");
-      setIsAppReady(true);
+      setProfileDataFetched(true);
     }
   };
-
-  useEffect(() => {
-    if (user) {
-      loadUserData();
-    } else {
-      setProfile(null);
-      setHabits([]);
-      setShowOnboarding(false);
-      setIsAppReady(true);
-    }
-  }, [user]); // Dependencia de 'user' para que se ejecute cuando el usuario cambie
 
   const handleQuickLog = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,9 +155,7 @@ const App: React.FC = () => {
 
       setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
       setIsModalOpen(false);
-      if (user) {
-        await loadUserData(); // Llamada directa a loadUserData
-      }
+      loadUserData(); // Usar loadUserData para recargar
     } catch (err) {
       console.error('App: Error saving habit:', err);
     }
@@ -215,9 +196,7 @@ const App: React.FC = () => {
       }
 
       setShowOnboarding(false);
-      if (user) {
-        await loadUserData(); // Llamada directa a loadUserData
-      }
+      loadUserData(); // Usar loadUserData para recargar
     } catch (error) {
       console.error("App: Error general al guardar datos de onboarding:", error);
     } finally {
@@ -274,6 +253,7 @@ const App: React.FC = () => {
 
   const editHabit = (habit: Habit) => {
     console.log('App: Edit habit:', habit);
+    // Implementar lógica de edición de hábito aquí
   };
 
   const startEditStatement = () => {
@@ -294,26 +274,32 @@ const App: React.FC = () => {
     }
   };
 
+  // --- Efectos de React ---
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+    } else {
+      setProfile(null);
+      setHabits([]);
+      setShowOnboarding(false);
+      setProfileDataFetched(true);
+    }
+  }, [user]);
+
   // --- Lógica de renderizado condicional ---
-  if (authLoading || !isAppReady) {
-    return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
-  }
+  const isLoadingContent = authLoading || (user && !profileDataFetched);
 
-  if (!user) {
-    return <Login />;
-  }
-
-  if (showOnboarding) {
-    return <Onboarding onComplete={handleOnboardingComplete} />;
-  }
+  if (isLoadingContent) return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
+  if (!user) return <Login />;
+  if (showOnboarding) return <Onboarding onComplete={handleOnboardingComplete} />;
 
   if (!profile) {
-    console.error("App: El perfil es null/undefined cuando debería estar cargado. Esto indica un problema grave.");
+    console.error("App: El perfil es null/undefined cuando debería estar cargado. Esto indica un problema.");
     return (
       <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-4 text-red-500 text-center">
         <Zap size={40} className="mb-4" />
-        <h2 className="text-xl font-bold mb-2">Error Crítico de Carga de Perfil</h2>
-        <p className="text-sm">No se pudo cargar la información de tu perfil después de la autenticación. Por favor, intenta refrescar la página.</p>
+        <h2 className="text-xl font-bold mb-2">Error de Carga de Perfil</h2>
+        <p className="text-sm">No se pudo cargar la información de tu perfil. Por favor, intenta refrescar la página.</p>
         <button onClick={() => window.location.reload()} className="mt-6 px-6 py-3 bg-white/10 border border-white/20 rounded-xl text-white font-bold hover:bg-white/20 transition-all">
           Refrescar
         </button>
