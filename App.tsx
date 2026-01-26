@@ -579,7 +579,10 @@ const App: React.FC = () => {
           setCurrentView('home');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        onInsightsClick={() => setCurrentView('insights')}
+        onInsightsClick={() => {
+          setCurrentView('insights');
+          window.scrollTo({ top: 0, behavior: 'smooth' }); // Desplazamiento al inicio
+        }}
       />
 
       <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
