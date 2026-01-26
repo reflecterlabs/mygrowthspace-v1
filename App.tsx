@@ -6,7 +6,7 @@ import {
   Zap,
   RotateCcw, 
   SendHorizonal, 
-  Maximize 
+  // Maximize // Eliminado de las importaciones
 } from 'lucide-react';
 import { useAuth } from './src/components/AuthProvider';
 import Login from './src/pages/Login';
@@ -33,7 +33,7 @@ const App: React.FC = () => {
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const [editingStatement, setEditingStatement] = useState('');
-  const [currentView, setCurrentView] = useState<'home' | 'insights' | 'profile'>('home'); // Restaurado a incluir 'profile'
+  const [currentView, setCurrentView] = useState<'home' | 'insights' | 'profile'>('home');
 
   // --- Efectos de React ---
   useEffect(() => {
@@ -347,7 +347,7 @@ const App: React.FC = () => {
       </nav>
 
       {/* Quick Log Input - Ahora flotante */}
-      <div className="fixed bottom-[23%] left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30"> {/* Ajustado a bottom-23% */}
+      <div className="fixed bottom-[15%] left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30"> {/* Ajustado a bottom-15% */}
         <section className="w-full space-y-6">
           <form onSubmit={handleQuickLog} className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
@@ -365,9 +365,7 @@ const App: React.FC = () => {
               <button type="submit" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
                 <SendHorizonal size={20} strokeWidth={2} />
               </button>
-              <button type="button" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
-                <Maximize size={20} strokeWidth={2} />
-              </button>
+              {/* Botón de expandir chat eliminado */}
             </div>
           </form>
 
