@@ -145,13 +145,11 @@ const App: React.FC = () => {
       if (selectErr) console.error('App: Error checking existing habit:', selectErr);
 
       if (existing) {
-        // Si el hábito ya existe, simplemente lo ignoramos o mostramos un mensaje.
-        // Por ahora, solo lo filtramos de las sugerencias si venía de ahí.
         setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
         return;
       }
 
-      const { error: insertError } = await supabase.from('habits').insert({
+      const { data: newHabitData, error: insertError } = await supabase.from('habits').insert({
         user_id: user?.id,
         name: habitData.name,
         category: habitData.category,
@@ -160,21 +158,37 @@ const App: React.FC = () => {
         time_of_day: habitData.time,
         start_date: new Date().toISOString().split('T')[0],
         completed_dates: []
-      }).select();
+      }).select(); // Capturamos los datos insertados
 
       if (insertError) {
         console.error('App: Error inserting habit:', insertError);
         return;
       }
 
-      // Eliminar la sugerencia después de aceptarla
+      if (newHabitData && newHabitData.length > 0) {
+        const insertedHabit = newHabitData[0];
+        const newHabit: Habit = {
+          id: insertedHabit.id,
+          name: insertedHabit.name,
+          category: insertedHabit.category,
+          frequency: insertedHabit.frequency,
+          daysOfWeek: insertedHabit.days_of_week || [],
+          time: insertedHabit.time_of_day,
+          streak: insertedHabit.streak || 0,
+          completedDates: insertedHabit.completed_dates || [],
+          createdAt: insertedHabit.created_at || new Date().toISOString(),
+          startDate: insertedHabit.start_date,
+          endDate: insertedHabit.end_date,
+          specificDates: insertedHabit.specific_dates,
+          isOneTime: insertedHabit.is_one_time
+        };
+        setHabits(prev => [...prev, newHabit]); // Actualizamos el estado directamente
+      }
+
       setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
       setIsModalOpen(false);
+      // Eliminado: setProfileStatus('loading'); ya no es necesario aquí.
       
-      // Forzar una recarga de hábitos para mostrar el nuevo
-      if (user) {
-        setProfileStatus('loading'); // Esto disparará el useEffect para recargar datos
-      }
     } catch (err) {
       console.error('App: Error saving habit:', err);
     }
@@ -214,10 +228,9 @@ const App: React.FC = () => {
         }
       }
 
-      setProfileStatus('ready');
-      if (user) {
-        setProfileStatus('loading');
-      }
+      // Después de guardar el perfil y los hábitos, forzamos una recarga completa
+      // para asegurar que todos los datos (incluyendo IDs de Supabase) estén sincronizados.
+      setProfileStatus('loading'); 
     } catch (error) {
       console.error("App: Error general al guardar datos de onboarding:", error);
       setProfileStatus('error');
