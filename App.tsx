@@ -34,23 +34,13 @@ const App: React.FC = () => {
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const [editingStatement, setEditingStatement] = useState('');
   const [currentView, setCurrentView] = useState<'home' | 'insights' | 'profile'>('home');
-  const [profileLoading, setProfileLoading] = useState(true); // Nuevo estado para la carga del perfil
+  const [profileDataFetched, setProfileDataFetched] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchUserData();
-    } else {
-      // Si el usuario cierra sesión o no está presente, restablecer estados y detener la carga
-      setProfile(null);
-      setHabits([]);
-      setShowOnboarding(false);
-      setProfileLoading(false); // No hay perfil que cargar si no hay usuario
-    }
-  }, [user]);
+  // --- Funciones de manejo de datos y eventos ---
 
-  const fetchUserData = async () => {
-    console.log("App: Iniciando fetchUserData...");
-    setProfileLoading(true); // Iniciar la carga del perfil
+  const loadUserData = async () => {
+    console.log("App: Iniciando loadUserData...");
+    setProfileDataFetched(false);
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
@@ -60,13 +50,13 @@ const App: React.FC = () => {
 
       if (profileError) {
         console.error("App: Error al obtener datos del perfil:", profileError);
-        throw profileError; // Propagar el error para que sea capturado por el catch
+        throw profileError;
       }
       
       if (!profileData || profileData.has_completed_onboarding === false) {
         console.log("App: Perfil no encontrado o onboarding incompleto. Mostrando onboarding.");
         setShowOnboarding(true);
-        setProfile(null); // Asegurarse de que el perfil sea null si se necesita el onboarding
+        setProfile(null);
       } else {
         console.log("App: Perfil de usuario cargado:", profileData);
         setProfile({
@@ -77,7 +67,7 @@ const App: React.FC = () => {
           focusAreas: profileData.focus_areas,
           narrative: profileData.narrative
         });
-        setShowOnboarding(false); // Asegurarse de que el onboarding esté oculto si el perfil se cargó
+        setShowOnboarding(false);
         
         const { data: habitsData, error: habitsError } = await supabase
           .from('habits')
@@ -86,7 +76,7 @@ const App: React.FC = () => {
 
         if (habitsError) {
           console.error("App: Error al obtener datos de hábitos:", habitsError);
-          throw habitsError; // Propagar el error
+          throw habitsError;
         }
         
         console.log("App: Hábitos cargados:", habitsData);
@@ -103,14 +93,13 @@ const App: React.FC = () => {
         })));
       }
     } catch (error) {
-      console.error("App: Error general en fetchUserData:", error);
-      // Asegurarse de que el perfil y los hábitos estén en un estado conocido en caso de error
+      console.error("App: Error general en loadUserData:", error);
       setProfile(null); 
       setHabits([]);
-      setShowOnboarding(true); // Podría ser útil volver al onboarding o mostrar un error
+      setShowOnboarding(true);
     } finally {
-      console.log("App: fetchUserData finalizado.");
-      setProfileLoading(false); // Finalizar la carga del perfil
+      console.log("App: loadUserData finalizado.");
+      setProfileDataFetched(true);
     }
   };
 
@@ -134,7 +123,6 @@ const App: React.FC = () => {
     if (!habitData.name) return;
 
     try {
-      // Check for an existing habit with same user and name to avoid duplicates
       const { data: existing, error: selectErr } = await supabase
         .from('habits')
         .select('id')
@@ -145,7 +133,6 @@ const App: React.FC = () => {
       if (selectErr) console.error('App: Error checking existing habit:', selectErr);
 
       if (existing) {
-        // Already exists — remove from suggestions and show feedback
         setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
         return;
       }
@@ -166,10 +153,9 @@ const App: React.FC = () => {
         return;
       }
 
-      // Only remove this specific suggestion after successful save
       setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
       setIsModalOpen(false);
-      fetchUserData();
+      loadUserData(); // Usar loadUserData para recargar
     } catch (err) {
       console.error('App: Error saving habit:', err);
     }
@@ -181,7 +167,7 @@ const App: React.FC = () => {
       const { error: profileUpsertError } = await supabase.from('user_profiles').upsert({
         user_id: user?.id,
         name: newProfile.name,
-        email: user?.email, // <-- Usando el email del usuario autenticado
+        email: user?.email,
         identity_statement: newProfile.identityStatement,
         focus_areas: newProfile.focusAreas,
         has_completed_onboarding: true
@@ -210,10 +196,9 @@ const App: React.FC = () => {
       }
 
       setShowOnboarding(false);
-      fetchUserData();
+      loadUserData(); // Usar loadUserData para recargar
     } catch (error) {
       console.error("App: Error general al guardar datos de onboarding:", error);
-      // Podrías querer mostrar un mensaje de error al usuario aquí
     } finally {
       console.log("App: Onboarding completado.");
     }
@@ -245,7 +230,6 @@ const App: React.FC = () => {
         ? habit.completedDates.filter(d => d !== date)
         : [...habit.completedDates, date];
 
-      // Optimistic update
       const originalHabits = habits;
       setHabits(prev =>
         prev.map(h =>
@@ -260,7 +244,6 @@ const App: React.FC = () => {
 
       if (error) {
         console.error('App: Error updating habit completion:', error);
-        // Revert on error
         setHabits(originalHabits);
       }
     } catch (err) {
@@ -270,6 +253,7 @@ const App: React.FC = () => {
 
   const editHabit = (habit: Habit) => {
     console.log('App: Edit habit:', habit);
+    // Implementar lógica de edición de hábito aquí
   };
 
   const startEditStatement = () => {
@@ -290,14 +274,25 @@ const App: React.FC = () => {
     }
   };
 
-  // Mostrar spinner si la autenticación o la carga del perfil están en curso
-  if (authLoading || profileLoading) return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
+  // --- Efectos de React ---
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+    } else {
+      setProfile(null);
+      setHabits([]);
+      setShowOnboarding(false);
+      setProfileDataFetched(true);
+    }
+  }, [user]);
+
+  // --- Lógica de renderizado condicional ---
+  const isLoadingContent = authLoading || (user && !profileDataFetched);
+
+  if (isLoadingContent) return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
   if (!user) return <Login />;
   if (showOnboarding) return <Onboarding onComplete={handleOnboardingComplete} />;
 
-  // Esta comprobación defensiva ahora solo se activará si hay un problema genuino
-  // después de que la carga del perfil haya terminado y el usuario esté presente,
-  // pero el perfil sigue siendo null.
   if (!profile) {
     console.error("App: El perfil es null/undefined cuando debería estar cargado. Esto indica un problema.");
     return (
