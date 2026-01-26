@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Dumbbell, 
-  Calendar, 
   User as UserIcon,
   LogOut,
   Loader2,
   Zap,
-  ChevronRight
+  ChevronRight, 
+  RotateCcw, 
+  SendHorizonal, 
+  Maximize 
 } from 'lucide-react';
 import { useAuth } from './src/components/AuthProvider';
 import Login from './src/pages/Login';
@@ -24,7 +25,7 @@ const App: React.FC = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'onboarding' | 'ready' | 'error'>('idle'); // Nuevo estado de máquina de estados
+  const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'onboarding' | 'ready' | 'error'>('idle');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [quickLog, setQuickLog] = useState('');
   const [isProcessingAI, setIsProcessingAI] = useState(false);
@@ -38,7 +39,6 @@ const App: React.FC = () => {
   // --- Efectos de React ---
   useEffect(() => {
     if (authLoading) {
-      // Si la autenticación aún está en curso, mantenemos el estado 'idle' o 'loading' global
       setProfileStatus('idle'); 
       return;
     }
@@ -46,7 +46,7 @@ const App: React.FC = () => {
     if (user) {
       const loadUserData = async () => {
         console.log("App: Iniciando loadUserData...");
-        setProfileStatus('loading'); // Establecer a 'loading' al iniciar la obtención de datos
+        setProfileStatus('loading');
         try {
           const { data: profileData, error: profileError } = await supabase
             .from('user_profiles')
@@ -61,8 +61,8 @@ const App: React.FC = () => {
           
           if (!profileData || profileData.has_completed_onboarding === false) {
             console.log("App: Perfil no encontrado o onboarding incompleto. Mostrando onboarding.");
-            setProfile(null); // Asegurarse de que el perfil sea null para el onboarding
-            setHabits([]); // Asegurarse de que los hábitos estén vacíos para el onboarding
+            setProfile(null);
+            setHabits([]);
             setProfileStatus('onboarding');
           } else {
             console.log("App: Perfil de usuario cargado:", profileData);
@@ -97,24 +97,22 @@ const App: React.FC = () => {
               completedDates: h.completed_dates || [],
               createdAt: h.created_at || new Date().toISOString()
             })));
-            setProfileStatus('ready'); // Perfil y hábitos cargados, listo para la app
+            setProfileStatus('ready');
           }
         } catch (error) {
           console.error("App: Error general en loadUserData:", error);
           setProfile(null); 
           setHabits([]);
-          setProfileStatus('error'); // Establecer estado de error
+          setProfileStatus('error');
         }
       };
       loadUserData();
     } else {
-      // Si no hay usuario y la autenticación ha terminado, significa que no está autenticado.
-      // Restablecer estados relacionados con el perfil y volver a 'idle' para mostrar el Login.
       setProfile(null);
       setHabits([]);
       setProfileStatus('idle'); 
     }
-  }, [user, authLoading]); // Depende de user y authLoading
+  }, [user, authLoading]);
 
   // --- Funciones de manejo de datos y eventos ---
 
@@ -170,24 +168,8 @@ const App: React.FC = () => {
 
       setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
       setIsModalOpen(false);
-      // Después de guardar un hábito, recargar los datos del usuario para actualizar la lista
-      // Esto se hará llamando a loadUserData a través del useEffect si el user no cambia,
-      // o directamente si necesitamos una actualización inmediata.
-      // Para evitar un bucle infinito, no llamamos a loadUserData directamente aquí.
-      // En su lugar, el useEffect se encargará de recargar si el `user` cambia,
-      // o podríamos tener una función de recarga más específica si es necesario.
-      // Por ahora, asumimos que la lista de hábitos se actualizará en el siguiente ciclo de renderizado
-      // o que el usuario interactuará para ver el nuevo hábito.
-      // Para una actualización inmediata, podríamos hacer un fetch directo de hábitos aquí.
-      // Por simplicidad, vamos a forzar una recarga de datos del usuario.
       if (user) {
-        // Una forma de forzar la recarga sin cambiar 'user' es llamar a loadUserData directamente
-        // o tener un estado que se actualice para disparar el useEffect.
-        // Por ahora, para evitar complejidad, asumiremos que el usuario verá el hábito en la siguiente interacción.
-        // Si se necesita una actualización inmediata, se podría refactorizar loadUserData para ser una función de utilidad.
-        // Para este caso, vamos a simular una recarga de datos del usuario.
-        // Esto es un poco hacky, pero funciona para forzar el useEffect.
-        setProfileStatus('loading'); // Forzar el estado de carga para que se recarguen los datos
+        setProfileStatus('loading');
       }
     } catch (err) {
       console.error('App: Error saving habit:', err);
@@ -228,15 +210,13 @@ const App: React.FC = () => {
         }
       }
 
-      // Después de completar el onboarding, establecer el estado a 'ready'
       setProfileStatus('ready');
-      // También recargar los datos del usuario para que el perfil y los hábitos se actualicen
       if (user) {
-        setProfileStatus('loading'); // Forzar el estado de carga para que se recarguen los datos
+        setProfileStatus('loading');
       }
     } catch (error) {
       console.error("App: Error general al guardar datos de onboarding:", error);
-      setProfileStatus('error'); // Establecer estado de error si falla el onboarding
+      setProfileStatus('error');
     } finally {
       console.log("App: Onboarding completado.");
     }
@@ -291,7 +271,6 @@ const App: React.FC = () => {
 
   const editHabit = (habit: Habit) => {
     console.log('App: Edit habit:', habit);
-    // Implementar lógica de edición de hábito aquí
   };
 
   const startEditStatement = () => {
@@ -314,22 +293,18 @@ const App: React.FC = () => {
 
   // --- Lógica de renderizado condicional ---
 
-  // 1. Mostrar spinner si la autenticación está en curso o si el perfil se está cargando
   if (authLoading || profileStatus === 'loading') {
     return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
   }
 
-  // 2. Si no hay usuario después de la comprobación de autenticación, mostrar la página de inicio de sesión
   if (!user) {
     return <Login />;
   }
 
-  // 3. Si el usuario existe y el perfil necesita onboarding
   if (profileStatus === 'onboarding') {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  // 4. Si el usuario existe y hubo un error al cargar el perfil
   if (profileStatus === 'error') {
     console.error("App: Error al cargar el perfil del usuario. Estado: 'error'.");
     return (
@@ -344,8 +319,6 @@ const App: React.FC = () => {
     );
   }
 
-  // 5. Si el usuario existe, el perfil está 'ready' y no hay onboarding/error, mostrar el contenido principal.
-  // En este punto, 'profile' NO debería ser null. Si lo es, es un error crítico.
   if (!profile) {
     console.error("App: ERROR CRÍTICO - El perfil es null cuando profileStatus es 'ready'.");
     return (
@@ -365,11 +338,9 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-28">
       <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-cyan-500/10 rounded-xl flex items-center justify-center text-cyan-400 border border-cyan-500/20">
-            <Dumbbell size={20} />
-          </div>
-          <span className="font-black text-lg tracking-tighter">My Growth Space</span>
+        <div className="flex flex-col items-start"> {/* Contenedor para el nuevo título */}
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">CORE PROTOCOL</span>
+          <span className="font-black text-2xl tracking-tighter text-white">Identity Hub</span>
         </div>
         <button onClick={() => signOut()} className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center hover:text-red-400 transition-all">
           <LogOut size={18} />
@@ -377,44 +348,13 @@ const App: React.FC = () => {
       </nav>
 
       <main className="pt-28 px-6 space-y-8">
-        <section className="max-w-3xl mx-auto w-full space-y-6">
-          <form onSubmit={handleQuickLog} className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
-            <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
-              <div className="pl-4 text-cyan-400">
-                {isProcessingAI ? <Loader2 size={20} className="animate-spin" /> : <Zap size={20} />}
-              </div>
-              <input 
-                type="text" 
-                placeholder="Describe your routine or a new habit..." 
-                className="w-full bg-transparent p-4 outline-none text-white font-medium"
-                value={quickLog}
-                onChange={(e) => setQuickLog(e.target.value)}
-              />
-              <button type="submit" className="bg-white text-black p-3 rounded-2xl mr-1 hover:bg-cyan-500 transition-all">
-                <ChevronRight size={20} strokeWidth={3} />
-              </button>
-            </div>
-          </form>
-
-          <div className="space-y-4">
-            {suggestions.map((suggestion, idx) => (
-              <InsightCard 
-                key={idx}
-                suggestion={suggestion}
-                onAccept={saveHabit}
-                onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
-              />
-            ))}
+        {/* Sección de Perfil de Persona */}
+        <div className="relative bg-gradient-to-br from-blue-600/10 to-cyan-500/10 border border-blue-600/20 rounded-[2.5rem] p-8 flex flex-col gap-8 items-center max-w-3xl mx-auto w-full">
+          <div className="absolute top-6 right-6 text-cyan-500 opacity-20">
+            <UserIcon size={80} strokeWidth={1} /> {/* Icono de fondo sutil */}
           </div>
-        </section>
-
-        <div className="relative bg-white/5 border border-white/10 rounded-[2.5rem] p-8 flex flex-col md:flex-row gap-8 items-center max-w-3xl mx-auto w-full">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-            <UserIcon size={40} className="text-white" />
-          </div>
-          <div className="flex-1 text-center md:text-left">
-            <h1 className="text-3xl font-black text-white">{profile?.name}</h1>
+          <div className="flex-1 text-center relative z-10">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">PERSONA PROFILE</span>
             {isEditingStatement ? (
               <div className="mt-4 space-y-3">
                 <textarea
@@ -446,24 +386,58 @@ const App: React.FC = () => {
             ) : (
               <button
                 onClick={startEditStatement}
-                className="text-slate-400 italic mt-1 hover:text-cyan-400 transition-colors text-sm group"
+                className="text-slate-300 italic text-lg hover:text-cyan-400 transition-colors group leading-relaxed"
               >
-                {profile?.identityStatement}
-                <span className="block text-[10px] font-black uppercase text-slate-600 group-hover:text-cyan-500 mt-2">Click to edit</span>
+                "{profile?.identityStatement}"
               </button>
             )}
           </div>
         </div>
 
+        {/* Carrusel de Fechas */}
+        <div className="max-w-3xl mx-auto w-full">
+          <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
+        </div>
+
+        {/* Quick Log Input */}
+        <section className="max-w-3xl mx-auto w-full space-y-6">
+          <form onSubmit={handleQuickLog} className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
+            <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
+              <div className="pl-4 text-slate-500">
+                <RotateCcw size={20} />
+              </div>
+              <input 
+                type="text" 
+                placeholder="Feed protocol data..." 
+                className="w-full bg-transparent p-4 outline-none text-white font-medium placeholder:text-slate-600"
+                value={quickLog}
+                onChange={(e) => setQuickLog(e.target.value)}
+              />
+              <button type="submit" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
+                <SendHorizonal size={20} strokeWidth={2} />
+              </button>
+              <button type="button" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
+                <Maximize size={20} strokeWidth={2} />
+              </button>
+            </div>
+          </form>
+
+          <div className="space-y-4">
+            {suggestions.map((suggestion, idx) => (
+              <InsightCard 
+                key={idx}
+                suggestion={suggestion}
+                onAccept={saveHabit}
+                onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Lista de Hábitos */}
         <div className="max-w-3xl mx-auto w-full space-y-6">
           <div className="space-y-6">
-            <div className="space-y-4">
-              <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
-                <Calendar className="text-cyan-400" size={20} />
-                Current Stack
-              </h2>
-              <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
-            </div>
             <div className="grid gap-2">
               {habits.length === 0 ? (
                 <div className="p-12 border border-dashed border-white/10 rounded-[2.5rem] text-center text-slate-500">
@@ -481,7 +455,6 @@ const App: React.FC = () => {
 
       <BottomNavBar 
         currentView={currentView}
-        onAddClick={() => setIsModalOpen(true)}
         onHomeClick={() => {
           setCurrentView('home');
           window.scrollTo({ top: 0, behavior: 'smooth' });

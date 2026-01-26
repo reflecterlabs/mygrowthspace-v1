@@ -1,8 +1,8 @@
 import React from 'react';
-import { Home, Sparkles, User, Plus } from 'lucide-react';
+import { LayoutGrid, BarChart2, User } from 'lucide-react'; // Iconos actualizados
 
 interface BottomNavBarProps {
-  onAddClick: () => void;
+  onAddClick?: () => void; // Ahora opcional, ya que el botón central se elimina
   onHomeClick?: () => void;
   onInsightsClick?: () => void;
   onProfileClick?: () => void;
@@ -10,17 +10,15 @@ interface BottomNavBarProps {
 }
 
 const BottomNavBar: React.FC<BottomNavBarProps> = ({
-  onAddClick,
   onHomeClick,
   onInsightsClick,
   onProfileClick,
   currentView = 'home'
 }) => {
   const navItems = [
-    { id: 'home', label: 'Home', icon: Home, onClick: onHomeClick },
-    { id: 'insights', label: 'Insights', icon: Sparkles, onClick: onInsightsClick },
-    { id: 'add', label: 'Add', icon: Plus, onClick: onAddClick },
-    { id: 'profile', label: 'Profile', icon: User, onClick: onProfileClick }
+    { id: 'home', label: 'Home', icon: LayoutGrid, onClick: onHomeClick }, // Icono de cuadrícula
+    { id: 'insights', label: 'Insights', icon: BarChart2, onClick: onInsightsClick }, // Icono de gráfico de barras
+    { id: 'profile', label: 'Profile', icon: User, onClick: onProfileClick } // Icono de usuario
   ];
 
   return (
@@ -29,30 +27,26 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({
         {navItems.map(item => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
-          const isAddBtn = item.id === 'add';
 
           return (
             <button
               key={item.id}
               onClick={item.onClick}
               className={`flex flex-col items-center justify-center py-3 px-2 transition-all rounded-lg ${
-                isAddBtn
-                  ? 'bg-white text-black hover:bg-cyan-400 hover:shadow-lg'
-                  : isActive
+                isActive
                   ? 'text-cyan-400'
                   : 'text-slate-400 hover:text-cyan-400'
               }`}
             >
               <Icon
-                size={isAddBtn ? 24 : 20}
-                strokeWidth={isAddBtn ? 3 : 2}
-                className={isAddBtn ? '' : 'group-hover:drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]'}
+                size={20}
+                strokeWidth={2}
+                className={'group-hover:drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]'}
               />
-              <span className={`text-[9px] font-black uppercase tracking-widest mt-1 ${
-                isAddBtn ? 'text-black font-black' : ''
-              }`}>
+              {/* Eliminado el texto de la etiqueta para que coincida con la imagen */}
+              {/* <span className={`text-[9px] font-black uppercase tracking-widest mt-1`}>
                 {item.label}
-              </span>
+              </span> */}
             </button>
           );
         })}
