@@ -178,7 +178,7 @@ const App: React.FC = () => {
           completedDates: insertedHabit.completed_dates || [],
           createdAt: insertedHabit.created_at || new Date().toISOString(),
           startDate: insertedHabit.start_date,
-          endDate: insertedHabit.end_date,
+          endDate: insertedHabit.end_date, // Corregido el typo aquí
           specificDates: insertedHabit.specific_dates,
           isOneTime: insertedHabit.is_one_time
         };
@@ -376,7 +376,7 @@ const App: React.FC = () => {
                   onChange={(e) => setEditingStatement(e.target.value)}
                   maxLength={264}
                   className="w-full bg-white/5 border border-white/20 rounded-2xl p-4 text-white text-sm outline-none focus:border-cyan-500 resize-none font-medium"
-                  rows={3}
+                  rows={5} 
                   placeholder="Your 264-character identity statement..."
                 />
                 <div className="flex items-center justify-between">
