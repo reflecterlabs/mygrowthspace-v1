@@ -152,7 +152,7 @@ const App: React.FC = () => {
         category: habitData.category,
         frequency: habitData.isOneTime ? 'one-time' : (habitData.frequency || 'daily'),
         days_of_week: habitData.daysOfWeek || (habitData.isOneTime ? [] : [0,1,2,3,4,5,6]),
-        time_of_day: habitData.time,
+        time_of_day: habitData.time || null, // <--- CAMBIO AQUÍ: Asegura que sea null si no hay valor
         start_date: habitData.startDate || new Date().toISOString().split('T')[0],
         specific_dates: habitData.specificDates || [],
         is_one_time: habitData.isOneTime || false,
@@ -244,7 +244,7 @@ const App: React.FC = () => {
           category: h.category,
           frequency: h.frequency,
           days_of_week: h.daysOfWeek,
-          time_of_day: h.time,
+          time_of_day: h.time || null, // <--- CAMBIO AQUÍ: Asegura que sea null si no hay valor
           start_date: h.startDate,
           specific_dates: h.specificDates || [],
           is_one_time: h.isOneTime || false,
