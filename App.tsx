@@ -203,20 +203,39 @@ const App: React.FC = () => {
     console.log("App: Completando onboarding...");
     const toastId = showLoading('Activating protocols...');
     try {
-      const { error: profileUpsertError } = await supabase.from('user_profiles').upsert({
-        user_id: user?.id,
-        name: newProfile.name,
-        email: user?.email,
-        identity_statement: newProfile.identityStatement,
-        focus_areas: newProfile.focusAreas,
-        has_completed_onboarding: true
-      }, { onConflict: 'user_id' });
+      // 1. Fetch the existing profile to get its 'id'
+      const { data: existingProfile, error: fetchProfileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
 
-      if (profileUpsertError) {
-        console.error("App: Error al guardar el perfil en onboarding:", profileUpsertError);
-        throw profileUpsertError;
+      if (fetchProfileError) {
+        console.error("App: Error fetching existing profile for onboarding update:", fetchProfileError);
+        throw fetchProfileError;
       }
 
+      if (!existingProfile) {
+        console.error("App: No existing profile found for user during onboarding completion. This should not happen if handle_new_user trigger worked.");
+        throw new Error("No existing profile found.");
+      }
+
+      // 2. Update the existing profile with onboarding data and set has_completed_onboarding to true
+      const { error: profileUpdateError } = await supabase.from('user_profiles').update({
+        name: newProfile.name,
+        email: user?.email, // Use user's email from auth
+        identity_statement: newProfile.identityStatement,
+        focus_areas: newProfile.focusAreas,
+        narrative: newProfile.narrative, // Ensure narrative is saved
+        has_completed_onboarding: true // THIS IS THE CRITICAL FIX
+      }).eq('id', existingProfile.id); // Update by the actual profile ID
+
+      if (profileUpdateError) {
+        console.error("App: Error al actualizar el perfil en onboarding:", profileUpdateError);
+        throw profileUpdateError;
+      }
+
+      // 3. Insert new habits
       if (newHabits.length > 0) {
         const habitsToInsert = newHabits.map(h => ({
           user_id: user?.id,
@@ -225,23 +244,23 @@ const App: React.FC = () => {
           frequency: h.frequency,
           days_of_week: h.daysOfWeek,
           time_of_day: h.time,
-          start_date: h.startDate, // Asegurar que startDate se mapea
-          specific_dates: h.specificDates || [], // Asegurar que specificDates se mapea
-          is_one_time: h.isOneTime || false, // Asegurar que isOneTime se mapea
+          start_date: h.startDate,
+          specific_dates: h.specificDates || [],
+          is_one_time: h.isOneTime || false,
           completed_dates: [],
           streak: 0,
           last_completed_date: null
         }));
-        console.log("App: Hábitos a insertar durante onboarding:", habitsToInsert); // Log para depuración
+        console.log("App: Hábitos a insertar durante onboarding:", habitsToInsert);
         const { data: insertedHabits, error: habitsInsertError } = await supabase.from('habits').insert(habitsToInsert).select();
         if (habitsInsertError) {
           console.error("App: Error al insertar hábitos en onboarding:", habitsInsertError);
           throw habitsInsertError;
         }
-        console.log("App: Hábitos insertados exitosamente durante onboarding:", insertedHabits); // Log para depuración
+        console.log("App: Hábitos insertados exitosamente durante onboarding:", insertedHabits);
       }
       showSuccess('Onboarding complete! Welcome.');
-      setProfileStatus('loading'); 
+      setProfileStatus('loading'); // Trigger re-load of user data to get the updated profile
     } catch (error) {
       showError('Failed to complete onboarding.');
       console.error("App: Error general al guardar datos de onboarding:", error);
@@ -470,7 +489,8 @@ const App: React.FC = () => {
 
           if (profileError) {
             console.error("App: Error al obtener datos del perfil:", profileError);
-            throw profileError;
+            setProfileStatus('error'); // Set error status if profile fetch fails
+            return;
           }
           
           if (!profileData || profileData.has_completed_onboarding === false) {
@@ -497,7 +517,8 @@ const App: React.FC = () => {
 
             if (habitsError) {
               console.error("App: Error al obtener datos de hábitos:", habitsError);
-              throw habitsError;
+              setProfileStatus('error'); // Set error status if habits fetch fails
+              return;
             }
             
             console.log("App: Hábitos cargados:", habitsData);
