@@ -87,27 +87,27 @@ serve(async (req: any) => {
             contents: parseRoutinePrompt,
             config: {
               responseMimeType: "application/json",
-              // responseSchema: { // Temporalmente eliminado para depuración
-              //   type: Type.OBJECT,
-              //   properties: {
-              //     habits: {
-              //       type: Type.ARRAY,
-              //       items: {
-              //         type: Type.OBJECT,
-              //         properties: {
-              //           name: { type: Type.STRING },
-              //           category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
-              //           time: { type: Type.STRING },
-              //           description: { type: Type.STRING },
-              //           daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } }
-              //         },
-              //         required: ["name", "category", "daysOfWeek"]
-              //       }
-              //     },
-              //     identity: { type: Type.STRING }
-              //   },
-              //   required: ["habits", "identity"]
-              // }
+              responseSchema: { // Restaurado el responseSchema
+                type: Type.OBJECT,
+                properties: {
+                  habits: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        name: { type: Type.STRING },
+                        category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
+                        time: { type: Type.STRING },
+                        description: { type: Type.STRING },
+                        daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } }
+                      },
+                      required: ["name", "category", "daysOfWeek"]
+                    }
+                  },
+                  identity: { type: Type.STRING }
+                },
+                required: ["habits", "identity"]
+              }
             }
           });
           
