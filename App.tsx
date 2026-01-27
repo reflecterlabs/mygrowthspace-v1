@@ -492,7 +492,7 @@ const App: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `my-growth-space-data-${user.id}.json`;
+      a.download = `my-growth-space-data.json`; // Nombre de archivo simplificado
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
