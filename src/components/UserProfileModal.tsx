@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Download, Trash2, LogOut, AlertCircle, Check } from 'lucide-react';
-import { UserProfile } from '../../types'; // 'Habit' ya no es necesario aquí
+import { UserProfile } from '../../types';
+import { showSuccess, showError, showLoading, dismissToast } from '../utils/toast'; // Importar utilidades de toast
 
 interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   userProfile: UserProfile;
-  // habits: Habit[]; // Eliminado: no se utiliza directamente en este componente
   onUpdateProfile: (newName: string) => Promise<void>;
   onDownloadData: () => void;
   onDeleteAccount: () => Promise<void>;
@@ -17,7 +17,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   isOpen,
   onClose,
   userProfile,
-  // habits, // Eliminado de la desestructuración
   onUpdateProfile,
   onDownloadData,
   onDeleteAccount,
@@ -27,6 +26,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,10 +40,58 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   if (!isOpen) return null;
 
   const handleSaveName = async () => {
-    if (editingName.trim() === userProfile.name) return;
+    if (editingName.trim() === userProfile.name || editingName.trim() === '') return;
     setIsSavingName(true);
-    await onUpdateProfile(editingName.trim());
-    setIsSavingName(false);
+    const toastId = showLoading('Updating username...');
+    try {
+      await onUpdateProfile(editingName.trim());
+      showSuccess('Username updated successfully!');
+    } catch (error) {
+      showError('Failed to update username.');
+      console.error("UserProfileModal: Error updating profile name:", error);
+    } finally {
+      dismissToast(toastId);
+      setIsSavingName(false);
+    }
+  };
+
+  const handleDownload = () => {
+    onDownloadData();
+    showSuccess('Your data has been downloaded!');
+  };
+
+  const handleDeleteAccountConfirmed = async () => {
+    setIsDeletingAccount(true);
+    const toastId = showLoading('Deleting account...');
+    try {
+      await onDeleteAccount();
+      showSuccess('Account deleted successfully!');
+      onClose(); // Close modal after successful deletion
+    } catch (error) {
+      showError('Failed to delete account.');
+      console.error("UserProfileModal: Error deleting account:", error);
+    } finally {
+      dismissToast(toastId);
+      setIsDeletingAccount(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleLogoutConfirmed = async () => {
+    setIsLoggingOut(true);
+    const toastId = showLoading('Logging out...');
+    try {
+      await onLogout();
+      showSuccess('Logged out successfully!');
+      onClose(); // Close modal after successful logout
+    } catch (error) {
+      showError('Failed to log out.');
+      console.error("UserProfileModal: Error logging out:", error);
+    } finally {
+      dismissToast(toastId);
+      setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
+    }
   };
 
   return (
@@ -85,7 +134,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
           {/* Download Data */}
           <button 
-            onClick={onDownloadData}
+            onClick={handleDownload}
             className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 text-white font-black text-sm flex items-center justify-center space-x-2 hover:bg-white/10 transition-all"
           >
             <Download size={18} />
@@ -95,18 +144,20 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           {/* Logout */}
           <button 
             onClick={() => setShowLogoutConfirm(true)}
-            className="w-full bg-red-500/10 border border-red-500/20 rounded-2xl py-4 text-red-400 font-black text-sm flex items-center justify-center space-x-2 hover:bg-red-500/20 transition-all"
+            disabled={isLoggingOut}
+            className="w-full bg-red-500/10 border border-red-500/20 rounded-2xl py-4 text-red-400 font-black text-sm flex items-center justify-center space-x-2 hover:bg-red-500/20 transition-all disabled:opacity-50"
           >
-            <LogOut size={18} />
+            {isLoggingOut ? <Loader2 size={18} className="animate-spin mr-2" /> : <LogOut size={18} />}
             <span>Log Out</span>
           </button>
 
           {/* Delete Account */}
           <button 
             onClick={() => setShowDeleteConfirm(true)}
-            className="w-full bg-red-500/20 border border-red-500/30 rounded-2xl py-4 text-red-500 font-black text-sm flex items-center justify-center space-x-2 hover:bg-red-500/30 transition-all"
+            disabled={isDeletingAccount}
+            className="w-full bg-red-500/20 border border-red-500/30 rounded-2xl py-4 text-red-500 font-black text-sm flex items-center justify-center space-x-2 hover:bg-red-500/30 transition-all disabled:opacity-50"
           >
-            <Trash2 size={18} />
+            {isDeletingAccount ? <Loader2 size={18} className="animate-spin mr-2" /> : <Trash2 size={18} />}
             <span>Delete Account</span>
           </button>
         </div>
@@ -128,10 +179,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   Cancel
                 </button>
                 <button
-                  onClick={onLogout}
-                  className="flex-1 px-6 py-3 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-400 font-black text-sm hover:bg-red-500/30 transition-all"
+                  onClick={handleLogoutConfirmed}
+                  disabled={isLoggingOut}
+                  className="flex-1 px-6 py-3 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-400 font-black text-sm hover:bg-red-500/30 transition-all disabled:opacity-50"
                 >
-                  Log Out
+                  {isLoggingOut ? <Loader2 size={18} className="animate-spin mr-2" /> : 'Log Out'}
                 </button>
               </div>
             </div>
@@ -155,10 +207,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   Cancel
                 </button>
                 <button
-                  onClick={onDeleteAccount}
-                  className="flex-1 px-6 py-3 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-400 font-black text-sm hover:bg-red-500/30 transition-all"
+                  onClick={handleDeleteAccountConfirmed}
+                  disabled={isDeletingAccount}
+                  className="flex-1 px-6 py-3 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-400 font-black text-sm hover:bg-red-500/30 transition-all disabled:opacity-50"
                 >
-                  Delete Account
+                  {isDeletingAccount ? <Loader2 size={18} className="animate-spin mr-2" /> : 'Delete Account'}
                 </button>
               </div>
             </div>

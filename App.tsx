@@ -21,6 +21,7 @@ import { supabase } from './src/integrations/supabase/client';
 import { Habit, UserProfile } from './types';
 import { generateSuggestedCards } from './services/geminiService';
 import InsightsPage from './src/pages/InsightsPage'; // Importar la nueva página de Insights
+import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast'; // Importar utilidades de toast
 
 // Helper function for streak calculation (moved outside component for reusability)
 const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
@@ -200,13 +201,17 @@ const App: React.FC = () => {
     if (!quickLog.trim()) return;
 
     setIsProcessingAI(true);
+    const toastId = showLoading('Analyzing input...');
     try {
       const aiSuggestions = await generateSuggestedCards(quickLog, habits);
       setSuggestions(aiSuggestions);
+      showSuccess('Suggestions generated!');
       setQuickLog('');
     } catch (err) {
+      showError('Failed to generate suggestions.');
       console.error("App: AI Error en handleQuickLog:", err);
     } finally {
+      dismissToast(toastId);
       setIsProcessingAI(false);
     }
   };
@@ -214,6 +219,7 @@ const App: React.FC = () => {
   const saveHabit = async (habitData: Partial<Habit>) => {
     if (!habitData.name) return;
 
+    const toastId = showLoading('Deploying protocol...');
     try {
       const { data: existing, error: selectErr } = await supabase
         .from('habits')
@@ -225,7 +231,9 @@ const App: React.FC = () => {
       if (selectErr) console.error('App: Error checking existing habit:', selectErr);
 
       if (existing) {
+        showError('A habit with this name already exists.');
         setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
+        dismissToast(toastId);
         return;
       }
 
@@ -246,6 +254,7 @@ const App: React.FC = () => {
 
       if (insertError) {
         console.error('App: Error inserting habit:', insertError);
+        showError('Failed to deploy protocol.');
         return;
       }
 
@@ -268,18 +277,23 @@ const App: React.FC = () => {
           lastCompletedDate: insertedHabit.last_completed_date
         };
         setHabits(prev => [...prev, newHabit]); // Actualizamos el estado directamente
+        showSuccess('Protocol deployed successfully!');
       }
 
       setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
       setIsModalOpen(false);
       
     } catch (err) {
+      showError('An unexpected error occurred while saving the habit.');
       console.error('App: Error saving habit:', err);
+    } finally {
+      dismissToast(toastId);
     }
   };
 
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
     console.log("App: Completando onboarding...");
+    const toastId = showLoading('Activating protocols...');
     try {
       const { error: profileUpsertError } = await supabase.from('user_profiles').upsert({
         user_id: user?.id,
@@ -313,12 +327,14 @@ const App: React.FC = () => {
           throw habitsInsertError;
         }
       }
-
+      showSuccess('Onboarding complete! Welcome.');
       setProfileStatus('loading'); 
     } catch (error) {
+      showError('Failed to complete onboarding.');
       console.error("App: Error general al guardar datos de onboarding:", error);
       setProfileStatus('error');
     } finally {
+      dismissToast(toastId);
       console.log("App: Onboarding completado.");
     }
   };
@@ -329,13 +345,18 @@ const App: React.FC = () => {
 
   const confirmDeleteHabit = async () => {
     if (!habitToDelete) return;
+    const toastId = showLoading('Deleting habit...');
     try {
       await supabase.from('habits').delete().eq('id', habitToDelete);
       setHabits(prev => prev.filter(h => h.id !== habitToDelete));
+      showSuccess('Habit deleted successfully!');
       setHabitToDelete(null);
     } catch (err) {
+      showError('Failed to delete habit.');
       console.error('App: Error deleting habit:', err);
       setHabitToDelete(null);
+    } finally {
+      dismissToast(toastId);
     }
   };
 
@@ -349,9 +370,6 @@ const App: React.FC = () => {
         ? habit.completedDates.filter(d => d !== date)
         : [...habit.completedDates, date];
 
-      // Calcular nueva racha y última fecha de completado
-      // La función calculateStreak ahora solo necesita las fechas completadas,
-      // ya que internamente usa la fecha actual para determinar el final de la racha.
       const { streak: newStreak, lastCompletedDate: newLastCompletedDate } = calculateStreak(habit, updatedDates);
 
       const originalHabits = habits;
@@ -372,15 +390,20 @@ const App: React.FC = () => {
 
       if (error) {
         console.error('App: Error updating habit completion:', error);
+        showError('Failed to update habit completion.');
         setHabits(originalHabits); // Revertir si hay error
+      } else {
+        showSuccess(isCompleted ? 'Habit marked incomplete.' : 'Habit marked complete!');
       }
     } catch (err) {
+      showError('An unexpected error occurred.');
       console.error('App: Error toggling habit completion:', err);
     }
   };
 
   const editHabit = (habit: Habit) => {
     console.log('App: Edit habit:', habit);
+    // Implement actual edit logic or open an edit modal here
   };
 
   const startEditStatement = () => {
@@ -390,20 +413,27 @@ const App: React.FC = () => {
 
   const saveStatement = async () => {
     if (!editingStatement.trim() || !profile) return;
+    const toastId = showLoading('Updating identity statement...');
     try {
       await supabase.from('user_profiles').update({
         identity_statement: editingStatement
       }).eq('user_id', user?.id);
       setProfile({ ...profile, identityStatement: editingStatement });
       setIsEditingStatement(false);
+      showSuccess('Identity statement updated!');
     } catch (err) {
+      showError('Failed to update identity statement.');
       console.error('App: Error updating statement:', err);
+    } finally {
+      dismissToast(toastId);
     }
   };
 
   // --- Nuevas funciones para el UserProfileModal ---
   const handleUpdateProfileName = async (newName: string) => {
-    if (!user || !profile) return;
+    if (!user || !profile) {
+      throw new Error("User or profile not available.");
+    }
     try {
       const { error } = await supabase
         .from('user_profiles')
@@ -414,12 +444,15 @@ const App: React.FC = () => {
       setProfile(prev => prev ? { ...prev, name: newName } : null);
     } catch (error) {
       console.error("App: Error updating profile name:", error);
-      // Optionally show a toast notification
+      throw error; // Re-throw to be caught by modal's toast handler
     }
   };
 
   const handleDownloadUserData = () => {
-    if (!user || !profile) return;
+    if (!user || !profile) {
+      showError('No user data to download.');
+      return;
+    }
 
     const userData = {
       profile: profile,
@@ -440,16 +473,15 @@ const App: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || !session || !user.email) { // Asegurarse de que 'session' esté disponible
+    if (!user || !session || !user.email) {
       console.error("App: No user, session, or user email available for deletion.");
-      return;
+      throw new Error("Authentication details missing for account deletion.");
     }
 
     try {
-      // Call the Edge Function to delete the user
       const { data, error } = await supabase.functions.invoke('delete-user', {
         headers: {
-          Authorization: `Bearer ${session.access_token}`, // Usar session.access_token
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
 
@@ -459,17 +491,20 @@ const App: React.FC = () => {
       }
 
       console.log("App: User account deleted successfully:", data);
-      await signOut(); // Sign out the user after deletion
-      setIsProfileModalOpen(false);
+      await signOut();
     } catch (error) {
       console.error("App: Error deleting account:", error);
-      // Optionally show a toast notification
+      throw error;
     }
   };
 
   const handleLogout = async () => {
-    await signOut();
-    setIsProfileModalOpen(false);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("App: Error during logout:", error);
+      throw error;
+    }
   };
 
   // --- Lógica de renderizado condicional ---
@@ -694,7 +729,6 @@ const App: React.FC = () => {
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}
           userProfile={profile}
-          // habits={habits} // Ya no se pasa aquí
           onUpdateProfile={handleUpdateProfileName}
           onDownloadData={handleDownloadUserData}
           onDeleteAccount={handleDeleteAccount}
