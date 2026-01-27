@@ -489,7 +489,14 @@ const App: React.FC = () => {
 
           if (profileError) {
             console.error("App: Error al obtener datos del perfil:", profileError);
-            setProfileStatus('error'); // Set error status if profile fetch fails
+            // Detectar errores de autenticación específicos
+            if (profileError.message.includes('Invalid Refresh Token') || profileError.message.includes('AuthApiError')) {
+              showError('Tu sesión ha expirado o es inválida. Por favor, inicia sesión de nuevo.');
+              await signOut(); // Forzar cierre de sesión
+            } else {
+              showError('Fallo al cargar los datos del perfil de usuario.');
+            }
+            setProfileStatus('error'); // Establecer estado de error general
             return;
           }
           
@@ -517,7 +524,8 @@ const App: React.FC = () => {
 
             if (habitsError) {
               console.error("App: Error al obtener datos de hábitos:", habitsError);
-              setProfileStatus('error'); // Set error status if habits fetch fails
+              showError('Fallo al cargar los datos de hábitos.'); // Mostrar toast de error
+              setProfileStatus('error'); // Establecer estado de error
               return;
             }
             
@@ -542,6 +550,7 @@ const App: React.FC = () => {
           }
         } catch (error) {
           console.error("App: Error general en loadUserData:", error);
+          showError('Ocurrió un error inesperado al cargar tus datos.'); // Mostrar toast de error general
           setProfile(null); 
           setHabits([]);
           setProfileStatus('error');
@@ -553,8 +562,7 @@ const App: React.FC = () => {
       setHabits([]);
       setProfileStatus('idle'); 
     }
-  }, [user, authLoading]);
-
+  }, [user, authLoading, signOut]); // Añadir signOut a las dependencias
   // --- Lógica de renderizado condicional ---
   if (authLoading || profileStatus === 'loading') {
     return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
