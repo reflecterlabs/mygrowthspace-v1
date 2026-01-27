@@ -1,23 +1,36 @@
 import { MotivationTip, SuggestedCard, Habit } from "../types";
 import { supabase } from '../src/integrations/supabase/client'; // Importar el cliente Supabase
 
-// No necesitamos la API_KEY aquí directamente
-// const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-// if (!API_KEY) {
-//   throw new Error("La variable de entorno VITE_GEMINI_API_KEY no está configurada. Por favor, añádela a tu archivo .env");
-// }
-// const ai = new GoogleGenAI({ apiKey: API_KEY });
+const invokeGeminiProxy = async (action: string, payload: any, retries: number = 3, delay: number = 1000): Promise<any> => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+        body: { action, payload },
+      });
 
-const invokeGeminiProxy = async (action: string, payload: any): Promise<any> => {
-  const { data, error } = await supabase.functions.invoke('gemini-proxy', {
-    body: { action, payload },
-  });
-
-  if (error) {
-    console.error(`Error invoking gemini-proxy for action ${action}:`, error);
-    throw new Error(`Failed to get data from Gemini proxy: ${error.message}`);
+      if (error) {
+        // Si el error es un 503 (UNAVAILABLE) y no es el último intento, reintentar
+        if (error.status === 503 && i < retries - 1) {
+          console.warn(`[geminiService] Retrying action ${action} due to 503 error. Attempt ${i + 1}/${retries}.`);
+          await new Promise(res => setTimeout(res, delay * (i + 1))); // Retraso exponencial
+          continue; // Ir al siguiente intento
+        }
+        console.error(`[geminiService] Error invoking gemini-proxy for action ${action}:`, error);
+        throw new Error(`Failed to get data from Gemini proxy: ${error.message}`);
+      }
+      return data;
+    } catch (e) {
+      // Si es un error de red o cualquier otro error antes de recibir una respuesta de Supabase
+      if (i < retries - 1) {
+        console.warn(`[geminiService] Retrying action ${action} due to network error. Attempt ${i + 1}/${retries}.`, e);
+        await new Promise(res => setTimeout(res, delay * (i + 1)));
+        continue;
+      }
+      console.error(`[geminiService] Final error invoking gemini-proxy for action ${action}:`, e);
+      throw e;
+    }
   }
-  return data;
+  throw new Error(`Failed to get data from Gemini proxy after ${retries} attempts.`);
 };
 
 export const getDailyInspiration = async (userFocus: string): Promise<MotivationTip> => {
