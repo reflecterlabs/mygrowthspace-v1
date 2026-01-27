@@ -225,15 +225,20 @@ const App: React.FC = () => {
           frequency: h.frequency,
           days_of_week: h.daysOfWeek,
           time_of_day: h.time,
+          start_date: h.startDate, // Asegurar que startDate se mapea
+          specific_dates: h.specificDates || [], // Asegurar que specificDates se mapea
+          is_one_time: h.isOneTime || false, // Asegurar que isOneTime se mapea
           completed_dates: [],
           streak: 0,
           last_completed_date: null
         }));
-        const { error: habitsInsertError } = await supabase.from('habits').insert(habitsToInsert).select();
+        console.log("App: Hábitos a insertar durante onboarding:", habitsToInsert); // Log para depuración
+        const { data: insertedHabits, error: habitsInsertError } = await supabase.from('habits').insert(habitsToInsert).select();
         if (habitsInsertError) {
           console.error("App: Error al insertar hábitos en onboarding:", habitsInsertError);
           throw habitsInsertError;
         }
+        console.log("App: Hábitos insertados exitosamente durante onboarding:", insertedHabits); // Log para depuración
       }
       showSuccess('Onboarding complete! Welcome.');
       setProfileStatus('loading'); 
