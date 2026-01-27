@@ -9,9 +9,9 @@ const invokeGeminiProxy = async (action: string, payload: any, retries: number =
       });
 
       if (error) {
-        // Si el error es un 503 (UNAVAILABLE) y no es el último intento, reintentar
-        if (error.status === 503 && i < retries - 1) {
-          console.warn(`[geminiService] Retrying action ${action} due to 503 error. Attempt ${i + 1}/${retries}.`);
+        // Reintentar en errores de servidor (códigos de estado 5xx)
+        if (error.status && error.status >= 500 && i < retries - 1) {
+          console.warn(`[geminiService] Retrying action ${action} due to server error (${error.status}). Attempt ${i + 1}/${retries}.`);
           await new Promise(res => setTimeout(res, delay * (i + 1))); // Retraso exponencial
           continue; // Ir al siguiente intento
         }
