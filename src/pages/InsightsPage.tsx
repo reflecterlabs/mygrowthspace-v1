@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-// import { supabase } from '../integrations/supabase/client'; // Eliminado: 'supabase' no se utiliza
-import { useAuth } from '../components/AuthProvider';
+import { useUser } from '@clerk/clerk-react'; // Importar useUser de Clerk
 import { Habit } from '../../types';
 import { Flame, LayoutGrid, Loader2 } from 'lucide-react';
 
@@ -9,7 +8,7 @@ interface InsightsPageProps {
 }
 
 const InsightsPage: React.FC<InsightsPageProps> = ({ habits }) => {
-  const { user } = useAuth();
+  const { user, isLoaded } = useUser(); // Usar useUser de Clerk
   const [loading, setLoading] = useState(true);
   const [groupedStreaks, setGroupedStreaks] = useState<Record<string, Habit[]>>({});
 
@@ -25,10 +24,10 @@ const InsightsPage: React.FC<InsightsPageProps> = ({ habits }) => {
       });
       setGroupedStreaks(grouped);
       setLoading(false);
-    } else if (!user) {
+    } else if (isLoaded && !user) { // Ajustar la condición para usar isLoaded de Clerk
       setLoading(false); // No user, no habits to load
     }
-  }, [habits, user]);
+  }, [habits, user, isLoaded]); // Añadir isLoaded a las dependencias
 
   if (loading) {
     return (

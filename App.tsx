@@ -6,7 +6,7 @@ import {
   RotateCcw, 
   SendHorizonal, 
 } from 'lucide-react';
-import { useUser, useAuth, SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react'; // Importar hooks y componentes de Clerk
+import { useUser, useAuth, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react'; // Corregido: Eliminado UserButton
 import Onboarding from './components/Onboarding';
 import HabitCard from './components/HabitCard';
 import AddHabitModal from './components/AddHabitModal';
@@ -89,7 +89,7 @@ const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: n
 
 const App: React.FC = () => {
   const { isSignedIn, user, isLoaded } = useUser(); // Usar useUser de Clerk
-  const { signOut, getToken } = useAuth(); // Usar useAuth de Clerk
+  const { signOut } = useAuth(); // Corregido: Eliminado getToken
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'onboarding' | 'ready' | 'error'>('idle');
@@ -659,7 +659,7 @@ const App: React.FC = () => {
                           placeholder="Your 264-character identity statement..."
                         />
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-slate-500 font-black uppercase">{editingStatement.length}/264</span>
+                          <span className="text-[10px] text-slate-500 font-black uppercase">{editingStatement.length}/264}</span>
                           <div className="flex gap-2">
                             <button
                               onClick={() => setIsEditingStatement(false)}
