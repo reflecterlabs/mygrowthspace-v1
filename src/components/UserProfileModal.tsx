@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Download, Trash2, LogOut, AlertCircle, Check } from 'lucide-react';
+import { X, User, Download, Trash2, LogOut, AlertCircle, Check, Loader2 } from 'lucide-react'; // Importar Loader2
 import { UserProfile } from '../../types';
 import { showSuccess, showError, showLoading, dismissToast } from '../utils/toast'; // Importar utilidades de toast
 
@@ -57,7 +57,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   const handleDownload = () => {
     onDownloadData();
-    showSuccess('Your data has been downloaded!');
+    // showSuccess('Your data has been downloaded!'); // Toast handled by onDownloadData in App.tsx
   };
 
   const handleDeleteAccountConfirmed = async () => {

@@ -454,22 +454,56 @@ const App: React.FC = () => {
       return;
     }
 
-    const userData = {
-      profile: profile,
-      habits: habits,
-      // Add any other data you want to include
-    };
+    const toastId = showLoading('Preparing your data for download...');
+    try {
+      // Asegurarse de que no se incluyan IDs de sistema internos como user_id de auth.users o profile.id de user_profiles.
+      // El estado 'profile' ya excluye 'id' y 'user_id' de la base de datos.
+      // 'Habit.id' es un identificador único para los propios hábitos del usuario, útil para la integridad de los datos.
+      const userData = {
+        profile: {
+          name: profile.name,
+          email: profile.email, // El propio correo electrónico del usuario, considerado parte de sus datos
+          isPremium: profile.isPremium,
+          identityStatement: profile.identityStatement,
+          focusAreas: profile.focusAreas,
+          narrative: profile.narrative,
+        },
+        habits: habits.map(h => ({
+          id: h.id, // Mantener el ID del hábito para la unicidad y posible reimportación
+          name: h.name,
+          category: h.category,
+          frequency: h.frequency,
+          daysOfWeek: h.daysOfWeek,
+          time: h.time,
+          description: h.description,
+          streak: h.streak,
+          completedDates: h.completedDates,
+          createdAt: h.createdAt,
+          startDate: h.startDate,
+          endDate: h.endDate,
+          specificDates: h.specificDates,
+          isOneTime: h.isOneTime,
+          lastCompletedDate: h.lastCompletedDate,
+        })),
+      };
 
-    const jsonString = JSON.stringify(userData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `my-growth-space-data-${user.id}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      const jsonString = JSON.stringify(userData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `my-growth-space-data-${user.id}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showSuccess('Your data has been downloaded!');
+    } catch (error) {
+      showError('Failed to download data.');
+      console.error("App: Error downloading user data:", error);
+    } finally {
+      dismissToast(toastId);
+    }
   };
 
   const handleDeleteAccount = async () => {
