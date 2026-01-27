@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User as UserIcon, // Usaremos este icono para abrir el modal de perfil
-  // LogOut, // Eliminado: Se movió dentro del modal
   Loader2,
   Zap,
   RotateCcw, 
   SendHorizonal, 
-  Plus 
 } from 'lucide-react';
 import { useAuth } from './src/components/AuthProvider';
 import Login from './src/pages/Login';
@@ -677,16 +675,8 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Floating Add Habit Button */}
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-16 h-16 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-all active:scale-95 drop-shadow-[0_0_20px_rgba(6,182,212,0.5)]"
-      >
-        <Plus size={32} strokeWidth={3} />
-      </button>
-
       {/* Quick Log Input y Sugerencias (ahora flotante en la parte inferior) */}
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4">
+      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4">
         {suggestions.length > 0 && (
           <div className="space-y-4">
             {suggestions.map((suggestion, idx) => (
@@ -729,6 +719,7 @@ const App: React.FC = () => {
           setCurrentView('insights');
           window.scrollTo({ top: 0, behavior: 'smooth' }); // Desplazamiento al inicio
         }}
+        onAddHabitClick={() => setIsModalOpen(true)} // Pasar la función para abrir el modal
       />
 
       <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
