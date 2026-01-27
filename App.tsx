@@ -101,6 +101,7 @@ const App: React.FC = () => {
   const [editingStatement, setEditingStatement] = useState('');
   const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Nuevo estado para forzar el refresco
 
   // --- Funciones de manejo de datos y eventos ---
 
@@ -260,7 +261,7 @@ const App: React.FC = () => {
         console.log("App: Hábitos insertados exitosamente durante onboarding:", insertedHabits);
       }
       showSuccess('Onboarding complete! Welcome.');
-      setProfileStatus('loading'); // Trigger re-load of user data to get the updated profile
+      setRefreshTrigger(prev => prev + 1); // Forzar el refresco de datos del usuario
     } catch (error) {
       showError('Failed to complete onboarding.');
       console.error("App: Error general al guardar datos de onboarding:", error);
@@ -562,7 +563,7 @@ const App: React.FC = () => {
       setHabits([]);
       setProfileStatus('idle'); 
     }
-  }, [user, authLoading, signOut]); // Añadir signOut a las dependencias
+  }, [user, authLoading, refreshTrigger, signOut]); // Añadir refreshTrigger a las dependencias
   // --- Lógica de renderizado condicional ---
   if (authLoading || profileStatus === 'loading') {
     return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
