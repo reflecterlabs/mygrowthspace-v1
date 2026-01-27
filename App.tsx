@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  User as UserIcon, // Usaremos este icono para abrir el modal de perfil
+  User as UserIcon,
   Loader2,
   Zap,
   RotateCcw, 
@@ -14,12 +14,12 @@ import AddHabitModal from './components/AddHabitModal';
 import InsightCard from './components/InsightCard';
 import DateCarousel from './components/DateCarousel';
 import BottomNavBar from './components/BottomNavBar';
-import UserProfileModal from './src/components/UserProfileModal'; // Importar el nuevo modal
+import UserProfileModal from './src/components/UserProfileModal';
 import { supabase } from './src/integrations/supabase/client';
 import { Habit, UserProfile } from './types';
 import { generateSuggestedCards } from './services/geminiService';
-import InsightsPage from './src/pages/InsightsPage'; // Importar la nueva página de Insights
-import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast'; // Importar utilidades de toast
+import InsightsPage from './src/pages/InsightsPage';
+import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
 
 // Helper function for streak calculation (moved outside component for reusability)
 const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
@@ -38,63 +38,56 @@ const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: n
 
   if (habit.frequency === 'daily') {
     let currentStreak = 0;
-    let streakEndsOnDate: string | null = null; // This will store the latest date in the streak
+    let streakEndsOnDate: string | null = null;
 
     const actualToday = new Date();
-    actualToday.setHours(0, 0, 0, 0); // Normalize to start of day
+    actualToday.setHours(0, 0, 0, 0);
     const actualTodayStr = actualToday.toISOString().split('T')[0];
 
-    // Filter completed dates up to and including actualToday
     const relevantCompletedDates = sortedDates.filter(date => date <= actualTodayStr);
 
     if (relevantCompletedDates.length === 0) {
       return { streak: 0, lastCompletedDate: null };
     }
 
-    let checkDate = new Date(actualToday); // Start checking from actual today
+    let checkDate = new Date(actualToday);
     checkDate.setHours(0, 0, 0, 0);
 
-    // Check if today is completed
     if (relevantCompletedDates.includes(actualTodayStr)) {
       currentStreak++;
       streakEndsOnDate = actualTodayStr;
-      checkDate.setDate(checkDate.getDate() - 1); // Move to yesterday
+      checkDate.setDate(checkDate.getDate() - 1);
     } else {
-      // If not completed today, check if yesterday was completed
-      checkDate.setDate(checkDate.getDate() - 1); // Move to yesterday
+      checkDate.setDate(checkDate.getDate() - 1);
       const yesterdayStr = checkDate.toISOString().split('T')[0];
       if (relevantCompletedDates.includes(yesterdayStr)) {
         currentStreak++;
         streakEndsOnDate = yesterdayStr;
-        checkDate.setDate(checkDate.getDate() - 1); // Move to day before yesterday
+        checkDate.setDate(checkDate.getDate() - 1);
       } else {
-        // No completion today or yesterday, streak is 0
         return { streak: 0, lastCompletedDate: relevantCompletedDates[relevantCompletedDates.length - 1] };
       }
     }
 
-    // Continue checking backwards
     while (true) {
       const currentCheckDateStr = checkDate.toISOString().split('T')[0];
       if (relevantCompletedDates.includes(currentCheckDateStr)) {
         currentStreak++;
         checkDate.setDate(checkDate.getDate() - 1);
       } else {
-        break; // Streak broken
+        break;
       }
     }
     
     return { streak: currentStreak, lastCompletedDate: streakEndsOnDate };
   }
 
-  // For 'weekly' habits, a simple streak calculation is more complex and out of scope for this single response.
-  // For now, we'll just return 0 streak for weekly habits.
   return { streak: 0, lastCompletedDate: sortedDates[sortedDates.length - 1] || null };
 };
 
 
 const App: React.FC = () => {
-  const { user, loading: authLoading, signOut, session } = useAuth(); // Añadir 'session' aquí
+  const { user, loading: authLoading, signOut, session } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'onboarding' | 'ready' | 'error'>('idle');
@@ -107,90 +100,7 @@ const App: React.FC = () => {
   const [isEditingStatement, setIsEditingStatement] = useState(false);
   const [editingStatement, setEditingStatement] = useState('');
   const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false); // Nuevo estado para el modal de perfil
-
-  // --- Efectos de React ---
-  useEffect(() => {
-    if (authLoading) {
-      setProfileStatus('idle'); 
-      return;
-    }
-
-    if (user) {
-      const loadUserData = async () => {
-        console.log("App: Iniciando loadUserData...");
-        setProfileStatus('loading');
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('user_id', user?.id)
-            .maybeSingle();
-
-          if (profileError) {
-            console.error("App: Error al obtener datos del perfil:", profileError);
-            throw profileError;
-          }
-          
-          if (!profileData || profileData.has_completed_onboarding === false) {
-            console.log("App: Perfil no encontrado o onboarding incompleto. Mostrando onboarding.");
-            setProfile(null);
-            setHabits([]);
-            setProfileStatus('onboarding');
-          } else {
-            console.log("App: Perfil de usuario cargado:", profileData);
-            setProfile({
-              name: profileData.name,
-              email: profileData.email,
-              isPremium: profileData.is_premium,
-              identityStatement: profileData.identity_statement,
-              focusAreas: profileData.focus_areas,
-              narrative: profileData.narrative
-            });
-            
-            const { data: habitsData, error: habitsError } = await supabase
-              .from('habits')
-              .select('*')
-              .eq('user_id', user?.id);
-
-            if (habitsError) {
-              console.error("App: Error al obtener datos de hábitos:", habitsError);
-              throw habitsError;
-            }
-            
-            console.log("App: Hábitos cargados:", habitsData);
-            setHabits((habitsData || []).map(h => ({
-              id: h.id,
-              name: h.name,
-              category: h.category,
-              frequency: h.frequency,
-              daysOfWeek: h.days_of_week || [],
-              time: h.time_of_day,
-              streak: h.streak || 0,
-              completedDates: h.completed_dates || [],
-              createdAt: h.created_at || new Date().toISOString(),
-              startDate: h.start_date,
-              endDate: h.end_date,
-              specificDates: h.specific_dates || [],
-              isOneTime: h.is_one_time || false,
-              lastCompletedDate: h.last_completed_date
-            })));
-            setProfileStatus('ready');
-          }
-        } catch (error) {
-          console.error("App: Error general en loadUserData:", error);
-          setProfile(null); 
-          setHabits([]);
-          setProfileStatus('error');
-        }
-      };
-      loadUserData();
-    } else {
-      setProfile(null);
-      setHabits([]);
-      setProfileStatus('idle'); 
-    }
-  }, [user, authLoading]);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // --- Funciones de manejo de datos y eventos ---
 
@@ -239,16 +149,16 @@ const App: React.FC = () => {
         user_id: user?.id,
         name: habitData.name,
         category: habitData.category,
-        frequency: habitData.isOneTime ? 'one-time' : (habitData.frequency || 'daily'), // Ajustado para 'one-time'
-        days_of_week: habitData.daysOfWeek || (habitData.isOneTime ? [] : [0,1,2,3,4,5,6]), // Si es one-time, no hay días de la semana
+        frequency: habitData.isOneTime ? 'one-time' : (habitData.frequency || 'daily'),
+        days_of_week: habitData.daysOfWeek || (habitData.isOneTime ? [] : [0,1,2,3,4,5,6]),
         time_of_day: habitData.time,
-        start_date: habitData.startDate || new Date().toISOString().split('T')[0], // Usar startDate si está disponible
-        specific_dates: habitData.specificDates || [], // Añadir specific_dates
-        is_one_time: habitData.isOneTime || false, // Añadir is_one_time
+        start_date: habitData.startDate || new Date().toISOString().split('T')[0],
+        specific_dates: habitData.specificDates || [],
+        is_one_time: habitData.isOneTime || false,
         completed_dates: [],
-        streak: 0, // Inicializar racha a 0
-        last_completed_date: null // Inicializar última fecha de completado a null
-      }).select(); // Capturamos los datos insertados
+        streak: 0,
+        last_completed_date: null
+      }).select();
 
       if (insertError) {
         console.error('App: Error inserting habit:', insertError);
@@ -269,12 +179,12 @@ const App: React.FC = () => {
           completedDates: insertedHabit.completed_dates || [],
           createdAt: insertedHabit.created_at || new Date().toISOString(),
           startDate: insertedHabit.start_date,
-          endDate: insertedHabit.end_date, // Corregido: insertedHabget a insertedHabit
+          endDate: insertedHabit.end_date,
           specificDates: insertedHabit.specific_dates,
           isOneTime: insertedHabit.is_one_time,
           lastCompletedDate: insertedHabit.last_completed_date
         };
-        setHabits(prev => [...prev, newHabit]); // Actualizamos el estado directamente
+        setHabits(prev => [...prev, newHabit]);
         showSuccess('Protocol deployed successfully!');
       }
 
@@ -316,8 +226,8 @@ const App: React.FC = () => {
           days_of_week: h.daysOfWeek,
           time_of_day: h.time,
           completed_dates: [],
-          streak: 0, // Inicializar racha a 0
-          last_completed_date: null // Inicializar última fecha de completado a null
+          streak: 0,
+          last_completed_date: null
         }));
         const { error: habitsInsertError } = await supabase.from('habits').insert(habitsToInsert).select();
         if (habitsInsertError) {
@@ -389,7 +299,7 @@ const App: React.FC = () => {
       if (error) {
         console.error('App: Error updating habit completion:', error);
         showError('Failed to update habit completion.');
-        setHabits(originalHabits); // Revertir si hay error
+        setHabits(originalHabits);
       } else {
         showSuccess(isCompleted ? 'Habit marked incomplete.' : 'Habit marked complete!');
       }
@@ -427,7 +337,6 @@ const App: React.FC = () => {
     }
   };
 
-  // --- Nuevas funciones para el UserProfileModal ---
   const handleUpdateProfileName = async (newName: string) => {
     if (!user || !profile) {
       throw new Error("User or profile not available.");
@@ -442,7 +351,7 @@ const App: React.FC = () => {
       setProfile(prev => prev ? { ...prev, name: newName } : null);
     } catch (error) {
       console.error("App: Error updating profile name:", error);
-      throw error; // Re-throw to be caught by modal's toast handler
+      throw error;
     }
   };
 
@@ -454,20 +363,17 @@ const App: React.FC = () => {
 
     const toastId = showLoading('Preparing your data for download...');
     try {
-      // Asegurarse de que no se incluyan IDs de sistema internos como user_id de auth.users o profile.id de user_profiles.
-      // El estado 'profile' ya excluye 'id' y 'user_id' de la base de datos.
-      // 'Habit.id' es un identificador único para los propios hábitos del usuario, útil para la integridad de los datos.
       const userData = {
         profile: {
           name: profile.name,
-          email: profile.email, // El propio correo electrónico del usuario, considerado parte de sus datos
+          email: profile.email,
           isPremium: profile.isPremium,
           identityStatement: profile.identityStatement,
           focusAreas: profile.focusAreas,
           narrative: profile.narrative,
         },
         habits: habits.map(h => ({
-          id: h.id, // Mantener el ID del hábito para la unicidad y posible reimportación
+          id: h.id,
           name: h.name,
           category: h.category,
           frequency: h.frequency,
@@ -490,7 +396,7 @@ const App: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `my-growth-space-data.json`; // Nombre de archivo simplificado
+      a.download = `my-growth-space-data.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -539,8 +445,91 @@ const App: React.FC = () => {
     }
   };
 
-  // --- Lógica de renderizado condicional ---
+  // --- Efectos de React ---
+  useEffect(() => {
+    if (authLoading) {
+      setProfileStatus('idle'); 
+      return;
+    }
 
+    if (user) {
+      const loadUserData = async () => {
+        console.log("App: Iniciando loadUserData...");
+        setProfileStatus('loading');
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', user?.id)
+            .maybeSingle();
+
+          if (profileError) {
+            console.error("App: Error al obtener datos del perfil:", profileError);
+            throw profileError;
+          }
+          
+          if (!profileData || profileData.has_completed_onboarding === false) {
+            console.log("App: Perfil no encontrado o onboarding incompleto. Mostrando onboarding.");
+            setProfile(null);
+            setHabits([]);
+            setProfileStatus('onboarding');
+          } else {
+            console.log("App: Perfil de usuario cargado:", profileData);
+            const loadedProfile: UserProfile = {
+              name: profileData.name,
+              email: profileData.email,
+              isPremium: profileData.is_premium,
+              identityStatement: profileData.identity_statement,
+              focusAreas: profileData.focus_areas,
+              narrative: profileData.narrative
+            };
+            setProfile(loadedProfile);
+            
+            const { data: habitsData, error: habitsError } = await supabase
+              .from('habits')
+              .select('*')
+              .eq('user_id', user?.id);
+
+            if (habitsError) {
+              console.error("App: Error al obtener datos de hábitos:", habitsError);
+              throw habitsError;
+            }
+            
+            console.log("App: Hábitos cargados:", habitsData);
+            setHabits((habitsData || []).map(h => ({
+              id: h.id,
+              name: h.name,
+              category: h.category,
+              frequency: h.frequency,
+              daysOfWeek: h.days_of_week || [],
+              time: h.time_of_day,
+              streak: h.streak || 0,
+              completedDates: h.completed_dates || [],
+              createdAt: h.created_at || new Date().toISOString(),
+              startDate: h.start_date,
+              endDate: h.end_date,
+              specificDates: h.specific_dates || [],
+              isOneTime: h.is_one_time || false,
+              lastCompletedDate: h.last_completed_date
+            })));
+            setProfileStatus('ready');
+          }
+        } catch (error) {
+          console.error("App: Error general en loadUserData:", error);
+          setProfile(null); 
+          setHabits([]);
+          setProfileStatus('error');
+        }
+      };
+      loadUserData();
+    } else {
+      setProfile(null);
+      setHabits([]);
+      setProfileStatus('idle'); 
+    }
+  }, [user, authLoading]);
+
+  // --- Lógica de renderizado condicional ---
   if (authLoading || profileStatus === 'loading') {
     return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
   }
@@ -567,7 +556,7 @@ const App: React.FC = () => {
     );
   }
 
-  if (!profile) {
+  if (profileStatus === 'ready' && !profile) {
     console.error("App: ERROR CRÍTICO - El perfil es null cuando profileStatus es 'ready'.");
     return (
       <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-4 text-red-500 text-center">
@@ -590,7 +579,6 @@ const App: React.FC = () => {
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">My Growth Space</span>
           <span className="font-black text-[26px] tracking-tighter text-white">{profile?.name || 'Guest'}</span>
         </div>
-        {/* Botón de perfil de usuario */}
         <button 
           onClick={() => setIsProfileModalOpen(true)} 
           className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center hover:text-cyan-400 transition-all"
@@ -601,7 +589,6 @@ const App: React.FC = () => {
 
       {currentView === 'home' ? (
         <main className="pt-28 px-6 space-y-8">
-          {/* Sección de Perfil de Persona */}
           <div className="relative bg-gradient-to-br from-blue-600/10 to-cyan-500/10 border border-blue-600/20 rounded-[2.5rem] p-8 flex flex-col gap-8 items-center max-w-3xl mx-auto w-full">
             <div className="absolute top-6 right-6 text-cyan-500 opacity-20">
               <UserIcon size={80} strokeWidth={1} />
@@ -647,12 +634,10 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Carrusel de Fechas */}
           <div className="max-w-3xl mx-auto w-full">
             <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
           </div>
 
-          {/* Lista de Hábitos */}
           <div className="max-w-3xl mx-auto w-full space-y-6">
             <div className="space-y-6">
               <div className="grid gap-2">
@@ -670,12 +655,11 @@ const App: React.FC = () => {
           </div>
         </main>
       ) : (
-        <div className="pt-28"> {/* Añadir padding para la página de insights */}
+        <div className="pt-28">
           <InsightsPage habits={habits} />
         </div>
       )}
 
-      {/* Quick Log Input y Sugerencias (ahora flotante en la parte inferior) */}
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4">
         {suggestions.length > 0 && (
           <div className="space-y-4">
@@ -717,9 +701,9 @@ const App: React.FC = () => {
         }}
         onInsightsClick={() => {
           setCurrentView('insights');
-          window.scrollTo({ top: 0, behavior: 'smooth' }); // Desplazamiento al inicio
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        onAddHabitClick={() => setIsModalOpen(true)} // Pasar la función para abrir el modal
+        onAddHabitClick={() => setIsModalOpen(true)}
       />
 
       <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
