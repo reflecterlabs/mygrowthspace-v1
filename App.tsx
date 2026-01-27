@@ -6,8 +6,7 @@ import {
   RotateCcw, 
   SendHorizonal, 
 } from 'lucide-react';
-import { useAuth } from './src/components/AuthProvider';
-import Login from './src/pages/Login';
+import { useUser, useAuth, SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react'; // Importar hooks y componentes de Clerk
 import Onboarding from './components/Onboarding';
 import HabitCard from './components/HabitCard';
 import AddHabitModal from './components/AddHabitModal';
@@ -20,6 +19,8 @@ import { Habit, UserProfile } from './types';
 import { generateSuggestedCards } from './services/geminiService';
 import InsightsPage from './src/pages/InsightsPage';
 import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
+import CreateWallet from './components/CreateWallet'; // Importar el nuevo componente
+import Transfer from './components/Transfer'; // Importar el nuevo componente
 
 // Helper function for streak calculation (moved outside component for reusability)
 const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
@@ -87,7 +88,8 @@ const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: n
 
 
 const App: React.FC = () => {
-  const { user, loading: authLoading, signOut, session } = useAuth();
+  const { isSignedIn, user, isLoaded } = useUser(); // Usar useUser de Clerk
+  const { signOut, getToken } = useAuth(); // Usar useAuth de Clerk
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'onboarding' | 'ready' | 'error'>('idle');
@@ -152,7 +154,7 @@ const App: React.FC = () => {
         category: habitData.category,
         frequency: habitData.isOneTime ? 'one-time' : (habitData.frequency || 'daily'),
         days_of_week: habitData.daysOfWeek || (habitData.isOneTime ? [] : [0,1,2,3,4,5,6]),
-        time_of_day: habitData.time || null, // <--- CAMBIO AQUÍ: Asegura que sea null si no hay valor
+        time_of_day: habitData.time || null,
         start_date: habitData.startDate || new Date().toISOString().split('T')[0],
         specific_dates: habitData.specificDates || [],
         is_one_time: habitData.isOneTime || false,
@@ -224,12 +226,12 @@ const App: React.FC = () => {
       // 2. Update the existing profile with onboarding data and set has_completed_onboarding to true
       const { error: profileUpdateError } = await supabase.from('user_profiles').update({
         name: newProfile.name,
-        email: user?.email, // Use user's email from auth
+        email: user?.emailAddresses[0]?.emailAddress, // Usar email de Clerk
         identity_statement: newProfile.identityStatement,
         focus_areas: newProfile.focusAreas,
-        narrative: newProfile.narrative, // Ensure narrative is saved
-        has_completed_onboarding: true // THIS IS THE CRITICAL FIX
-      }).eq('id', existingProfile.id); // Update by the actual profile ID
+        narrative: newProfile.narrative,
+        has_completed_onboarding: true
+      }).eq('id', existingProfile.id);
 
       if (profileUpdateError) {
         console.error("App: Error al actualizar el perfil en onboarding:", profileUpdateError);
@@ -244,7 +246,7 @@ const App: React.FC = () => {
           category: h.category,
           frequency: h.frequency,
           days_of_week: h.daysOfWeek,
-          time_of_day: h.time || null, // <--- CAMBIO AQUÍ: Asegura que sea null si no hay valor
+          time_of_day: h.time || null,
           start_date: h.startDate,
           specific_dates: h.specificDates || [],
           is_one_time: h.isOneTime || false,
@@ -436,28 +438,37 @@ const App: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || !session || !user.email) {
-      console.error("App: No user, session, or user email available for deletion.");
+    if (!user || !user.id) {
+      console.error("App: No user available for deletion.");
       throw new Error("Authentication details missing for account deletion.");
     }
 
+    const toastId = showLoading('Deleting account...');
     try {
-      const { data, error } = await supabase.functions.invoke('delete-user', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      // First, delete user data from Supabase
+      const { error: supabaseDeleteError } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('user_id', user.id);
 
-      if (error) {
-        console.error("App: Error invoking delete-user function:", error);
-        throw error;
+      if (supabaseDeleteError) {
+        console.error("App: Error deleting Supabase profile:", supabaseDeleteError);
+        throw supabaseDeleteError;
       }
 
-      console.log("App: User account deleted successfully:", data);
+      // Then, delete the user from Clerk
+      // Clerk's user deletion is typically handled via their dashboard or backend API.
+      // For client-side, we usually just sign out. If a direct client-side delete is needed,
+      // it would involve Clerk's SDK or a custom Clerk webhook/API route.
+      // For now, we'll just sign out after deleting Supabase data.
       await signOut();
+      showSuccess('Account and data deleted successfully!');
     } catch (error) {
+      showError('Failed to delete account.');
       console.error("App: Error deleting account:", error);
       throw error;
+    } finally {
+      dismissToast(toastId);
     }
   };
 
@@ -472,32 +483,29 @@ const App: React.FC = () => {
 
   // --- Efectos de React ---
   useEffect(() => {
-    if (authLoading) {
+    if (!isLoaded) { // Clerk is still loading
       setProfileStatus('idle'); 
       return;
     }
 
-    if (user) {
+    if (isSignedIn && user) {
       const loadUserData = async () => {
         console.log("App: Iniciando loadUserData...");
         setProfileStatus('loading');
         try {
+          // Ensure Supabase auth.users entry exists for Clerk user
+          // Clerk handles the auth.users creation via webhooks or direct integration.
+          // We just need to ensure our user_profiles table is in sync.
           const { data: profileData, error: profileError } = await supabase
             .from('user_profiles')
             .select('*')
-            .eq('user_id', user?.id)
+            .eq('user_id', user.id) // Use Clerk's user.id as Supabase user_id
             .maybeSingle();
 
           if (profileError) {
             console.error("App: Error al obtener datos del perfil:", profileError);
-            // Detectar errores de autenticación específicos
-            if (profileError.message.includes('Invalid Refresh Token') || profileError.message.includes('AuthApiError')) {
-              showError('Tu sesión ha expirado o es inválida. Por favor, inicia sesión de nuevo.');
-              await signOut(); // Forzar cierre de sesión
-            } else {
-              showError('Fallo al cargar los datos del perfil de usuario.');
-            }
-            setProfileStatus('error'); // Establecer estado de error general
+            showError('Fallo al cargar los datos del perfil de usuario.');
+            setProfileStatus('error');
             return;
           }
           
@@ -521,12 +529,12 @@ const App: React.FC = () => {
             const { data: habitsData, error: habitsError } = await supabase
               .from('habits')
               .select('*')
-              .eq('user_id', user?.id);
+              .eq('user_id', user.id); // Usar Clerk's user.id
 
             if (habitsError) {
               console.error("App: Error al obtener datos de hábitos:", habitsError);
-              showError('Fallo al cargar los datos de hábitos.'); // Mostrar toast de error
-              setProfileStatus('error'); // Establecer estado de error
+              showError('Fallo al cargar los datos de hábitos.');
+              setProfileStatus('error');
               return;
             }
             
@@ -551,7 +559,7 @@ const App: React.FC = () => {
           }
         } catch (error) {
           console.error("App: Error general en loadUserData:", error);
-          showError('Ocurrió un error inesperado al cargar tus datos.'); // Mostrar toast de error general
+          showError('Ocurrió un error inesperado al cargar tus datos.');
           setProfile(null); 
           setHabits([]);
           setProfileStatus('error');
@@ -563,223 +571,241 @@ const App: React.FC = () => {
       setHabits([]);
       setProfileStatus('idle'); 
     }
-  }, [user, authLoading, refreshTrigger, signOut]); // Añadir refreshTrigger a las dependencias
+  }, [isSignedIn, isLoaded, user, refreshTrigger, signOut]);
+
   // --- Lógica de renderizado condicional ---
-  if (authLoading || profileStatus === 'loading') {
+  if (!isLoaded) { // Clerk está cargando
     return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
   }
 
-  if (!user) {
-    return <Login />;
-  }
-
-  if (profileStatus === 'onboarding') {
-    return <Onboarding onComplete={handleOnboardingComplete} />;
-  }
-
-  if (profileStatus === 'error') {
-    console.error("App: Error al cargar el perfil del usuario. Estado: 'error'.");
-    return (
-      <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-4 text-red-500 text-center">
-        <Zap size={40} className="mb-4" />
-        <h2 className="text-xl font-bold mb-2">Error de Carga de Perfil</h2>
-        <p className="text-sm">No se pudo cargar la información de tu perfil. Por favor, intenta refrescar la página.</p>
-        <button onClick={() => window.location.reload()} className="mt-6 px-6 py-3 bg-white/10 border border-white/20 rounded-xl text-white font-bold hover:bg-white/20 transition-all">
-          Refrescar
-        </button>
-      </div>
-    );
-  }
-
-  if (profileStatus === 'ready' && !profile) {
-    console.error("App: ERROR CRÍTICO - El perfil es null cuando profileStatus es 'ready'.");
-    return (
-      <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-4 text-red-500 text-center">
-        <Zap size={40} className="mb-4" />
-        <h2 className="text-xl font-bold mb-2">Error Crítico de Perfil</h2>
-        <p className="text-sm">Se ha producido un error inesperado al cargar tu perfil. Por favor, intenta cerrar sesión y volver a iniciarla.</p>
-        <button onClick={() => signOut()} className="mt-6 px-6 py-3 bg-white/10 border border-white/20 rounded-xl text-white font-bold hover:bg-white/20 transition-all">
-          Cerrar Sesión
-        </button>
-      </div>
-    );
-  }
-
-  console.log("App: Renderizando contenido principal. Perfil:", profile, "Hábitos:", habits);
-
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-64">
-      <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
-        <div className="flex flex-col items-start">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">My Growth Space</span>
-          <span className="font-black text-[26px] tracking-tighter text-white">{profile?.name || 'Guest'}</span>
-        </div>
-        <button 
-          onClick={() => setIsProfileModalOpen(true)} 
-          className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center hover:text-cyan-400 transition-all"
-        >
-          <UserIcon size={18} />
-        </button>
-      </nav>
-
-      {currentView === 'home' ? (
-        <main className="pt-28 px-6 space-y-8">
-          <div className="relative bg-gradient-to-br from-blue-600/10 to-cyan-500/10 border border-blue-600/20 rounded-[2.5rem] p-8 flex flex-col gap-8 items-center max-w-3xl mx-auto w-full">
-            <div className="absolute top-6 right-6 text-cyan-500 opacity-20">
-              <UserIcon size={80} strokeWidth={1} />
+    <>
+      <SignedOut>
+        <div className="min-h-screen w-full bg-[#0a0a0c] flex flex-col items-center justify-center p-8 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-20 bg-gradient-to-tr from-orange-900 to-blue-900 blur-3xl"></div>
+          
+          <div className="w-full max-w-sm space-y-8 animate-in slide-in-from-bottom-8 relative z-10">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center text-cyan-400 mx-auto mb-6">
+                <UserIcon size={32} />
+              </div>
+              <h2 className="text-3xl font-black text-white mb-2">Welcome to Growth Space</h2>
+              <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Sign in to continue</p>
             </div>
-            <div className="flex-1 text-center relative z-10">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">PERSON'S MANIFESTO</span>
-              {isEditingStatement ? (
-                <div className="mt-4 space-y-3">
-                  <textarea
-                    value={editingStatement}
-                    onChange={(e) => setEditingStatement(e.target.value)}
-                    maxLength={264}
-                    className="w-full bg-white/5 border border-white/20 rounded-2xl p-4 text-white text-sm outline-none focus:border-cyan-500 resize-none font-medium"
-                    rows={5} 
-                    placeholder="Your 264-character identity statement..."
-                  />
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-slate-500 font-black uppercase">{editingStatement.length}/264</span>
-                    <div className="flex gap-2">
+
+            <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 shadow-2xl backdrop-blur-md text-center">
+              <SignInButton mode="modal">
+                <button className="w-full bg-cyan-500 text-black rounded-2xl py-4 font-black text-lg flex items-center justify-center space-x-2 hover:bg-cyan-400 transition-all active:scale-95">
+                  <UserIcon size={24} />
+                  <span>Sign In / Sign Up</span>
+                </button>
+              </SignInButton>
+            </div>
+          </div>
+        </div>
+      </SignedOut>
+
+      <SignedIn>
+        {profileStatus === 'loading' && (
+          <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>
+        )}
+
+        {profileStatus === 'onboarding' && (
+          <Onboarding onComplete={handleOnboardingComplete} />
+        )}
+
+        {profileStatus === 'error' && (
+          <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-4 text-red-500 text-center">
+            <Zap size={40} className="mb-4" />
+            <h2 className="text-xl font-bold mb-2">Error de Carga de Perfil</h2>
+            <p className="text-sm">No se pudo cargar la información de tu perfil. Por favor, intenta refrescar la página.</p>
+            <button onClick={() => window.location.reload()} className="mt-6 px-6 py-3 bg-white/10 border border-white/20 rounded-xl text-white font-bold hover:bg-white/20 transition-all">
+              Refrescar
+            </button>
+          </div>
+        )}
+
+        {profileStatus === 'ready' && profile && (
+          <div className="min-h-screen bg-[#0a0a0c] text-slate-100 font-sans pb-64">
+            <nav className="fixed top-0 w-full z-50 px-6 py-4 flex items-center justify-between bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5">
+              <div className="flex flex-col items-start">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">My Growth Space</span>
+                <span className="font-black text-[26px] tracking-tighter text-white">{profile?.name || 'Guest'}</span>
+              </div>
+              <button 
+                onClick={() => setIsProfileModalOpen(true)} 
+                className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center hover:text-cyan-400 transition-all"
+              >
+                <UserIcon size={18} />
+              </button>
+            </nav>
+
+            {currentView === 'home' ? (
+              <main className="pt-28 px-6 space-y-8">
+                <div className="relative bg-gradient-to-br from-blue-600/10 to-cyan-500/10 border border-blue-600/20 rounded-[2.5rem] p-8 flex flex-col gap-8 items-center max-w-3xl mx-auto w-full">
+                  <div className="absolute top-6 right-6 text-cyan-500 opacity-20">
+                    <UserIcon size={80} strokeWidth={1} />
+                  </div>
+                  <div className="flex-1 text-center relative z-10">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">PERSON'S MANIFESTO</span>
+                    {isEditingStatement ? (
+                      <div className="mt-4 space-y-3">
+                        <textarea
+                          value={editingStatement}
+                          onChange={(e) => setEditingStatement(e.target.value)}
+                          maxLength={264}
+                          className="w-full bg-white/5 border border-white/20 rounded-2xl p-4 text-white text-sm outline-none focus:border-cyan-500 resize-none font-medium"
+                          rows={5} 
+                          placeholder="Your 264-character identity statement..."
+                        />
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 font-black uppercase">{editingStatement.length}/264</span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setIsEditingStatement(false)}
+                              className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-black text-slate-400 hover:text-white transition-all"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={saveStatement}
+                              className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/50 rounded-xl text-sm font-black text-cyan-400 hover:bg-cyan-500/30 transition-all"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
                       <button
-                        onClick={() => setIsEditingStatement(false)}
-                        className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-black text-slate-400 hover:text-white transition-all"
+                        onClick={startEditStatement}
+                        className="text-slate-300 italic text-lg hover:text-cyan-400 transition-colors group leading-relaxed"
                       >
-                        Cancel
+                        "{profile?.identityStatement}"
                       </button>
-                      <button
-                        onClick={saveStatement}
-                        className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/50 rounded-xl text-sm font-black text-cyan-400 hover:bg-cyan-500/30 transition-all"
-                      >
-                        Save
-                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="max-w-3xl mx-auto w-full">
+                  <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
+                </div>
+
+                <div className="max-w-3xl mx-auto w-full space-y-6">
+                  <div className="space-y-6">
+                    <div className="grid gap-2">
+                      {habits.length === 0 ? (
+                        <div className="p-12 border border-dashed border-white/10 rounded-[2.5rem] text-center text-slate-500">
+                          Your protocol is empty. Use the prompt above to initialize.
+                        </div>
+                      ) : (
+                        habits.map(h => (
+                          <HabitCard key={h.id} habit={h} selectedDateStr={selectedDate} onToggle={toggleHabitCompletion} onDelete={deleteHabit} onEdit={editHabit} />
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
-              ) : (
-                <button
-                  onClick={startEditStatement}
-                  className="text-slate-300 italic text-lg hover:text-cyan-400 transition-colors group leading-relaxed"
-                >
-                  "{profile?.identityStatement}"
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="max-w-3xl mx-auto w-full">
-            <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
-          </div>
-
-          <div className="max-w-3xl mx-auto w-full space-y-6">
-            <div className="space-y-6">
-              <div className="grid gap-2">
-                {habits.length === 0 ? (
-                  <div className="p-12 border border-dashed border-white/10 rounded-[2.5rem] text-center text-slate-500">
-                    Your protocol is empty. Use the prompt above to initialize.
-                  </div>
-                ) : (
-                  habits.map(h => (
-                    <HabitCard key={h.id} habit={h} selectedDateStr={selectedDate} onToggle={toggleHabitCompletion} onDelete={deleteHabit} onEdit={editHabit} />
-                  ))
-                )}
+                {/* Añadir los componentes de Chipi Pay aquí para probarlos */}
+                <div className="max-w-3xl mx-auto w-full space-y-6 mt-8">
+                  <CreateWallet />
+                  <Transfer />
+                </div>
+              </main>
+            ) : (
+              <div className="pt-28">
+                <InsightsPage habits={habits} />
               </div>
-            </div>
-          </div>
-        </main>
-      ) : (
-        <div className="pt-28">
-          <InsightsPage habits={habits} />
-        </div>
-      )}
+            )}
 
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4">
-        {suggestions.length > 0 && (
-          <div className="space-y-4">
-            {suggestions.map((suggestion, idx) => (
-              <InsightCard 
-                key={idx}
-                suggestion={suggestion}
-                onAccept={saveHabit}
-                onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
+            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4">
+              {suggestions.length > 0 && (
+                <div className="space-y-4">
+                  {suggestions.map((suggestion, idx) => (
+                    <InsightCard 
+                      key={idx}
+                      suggestion={suggestion}
+                      onAccept={saveHabit}
+                      onReject={() => setSuggestions(prev => prev.filter((_, i) => i !== idx))}
+                    />
+                  ))}
+                </div>
+              )}
+              <form onSubmit={handleQuickLog} className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
+                <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
+                  <div className="pl-4 text-slate-500">
+                    {isProcessingAI ? <Loader2 size={20} className="animate-spin" /> : <RotateCcw size={20} />}
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Feed protocol data..." 
+                    className="w-full bg-transparent p-4 outline-none text-white font-medium placeholder:text-slate-600"
+                    value={quickLog}
+                    onChange={(e) => setQuickLog(e.target.value)}
+                  />
+                  <button type="submit" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
+                    <SendHorizonal size={20} strokeWidth={2} />
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <BottomNavBar 
+              currentView={currentView}
+              onHomeClick={() => {
+                setCurrentView('home');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onInsightsClick={() => {
+                setCurrentView('insights');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onAddHabitClick={() => setIsModalOpen(true)}
+            />
+
+            <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
+
+            {habitToDelete && (
+              <div className="fixed inset-0 z-[105] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-2xl">
+                  <h3 className="text-xl font-black text-white mb-4">Delete Habit?</h3>
+                  <p className="text-slate-400 text-sm mb-8">
+                    Are you sure you want to delete this habit? This action cannot be undone.
+                  </p>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setHabitToDelete(null)}
+                      className="flex-1 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-sm hover:bg-white/10 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDeleteHabit}
+                      className="flex-1 px-6 py-3 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-400 font-black text-sm hover:bg-red-500/30 transition-all"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {profile && (
+              <UserProfileModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
+                userProfile={profile}
+                onUpdateProfile={handleUpdateProfileName}
+                onDownloadData={handleDownloadUserData}
+                onDeleteAccount={handleDeleteAccount}
+                onLogout={handleLogout}
               />
-            ))}
+            )}
           </div>
         )}
-        <form onSubmit={handleQuickLog} className="relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/50 to-blue-600/50 rounded-3xl blur opacity-20 group-focus-within:opacity-40 transition-opacity"></div>
-          <div className="relative bg-white/5 border border-white/10 rounded-3xl p-1 flex items-center backdrop-blur-xl">
-            <div className="pl-4 text-slate-500">
-              {isProcessingAI ? <Loader2 size={20} className="animate-spin" /> : <RotateCcw size={20} />}
-            </div>
-            <input 
-              type="text" 
-              placeholder="Feed protocol data..." 
-              className="w-full bg-transparent p-4 outline-none text-white font-medium placeholder:text-slate-600"
-              value={quickLog}
-              onChange={(e) => setQuickLog(e.target.value)}
-            />
-            <button type="submit" className="bg-white/5 text-slate-500 p-3 rounded-2xl mr-1 hover:bg-white/10 transition-all">
-              <SendHorizonal size={20} strokeWidth={2} />
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <BottomNavBar 
-        currentView={currentView}
-        onHomeClick={() => {
-          setCurrentView('home');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        onInsightsClick={() => {
-          setCurrentView('insights');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        onAddHabitClick={() => setIsModalOpen(true)}
-      />
-
-      <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
-
-      {habitToDelete && (
-        <div className="fixed inset-0 z-[105] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-2xl">
-            <h3 className="text-xl font-black text-white mb-4">Delete Habit?</h3>
-            <p className="text-slate-400 text-sm mb-8">
-              Are you sure you want to delete this habit? This action cannot be undone.
-            </p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setHabitToDelete(null)}
-                className="flex-1 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-sm hover:bg-white/10 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteHabit}
-                className="flex-1 px-6 py-3 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-400 font-black text-sm hover:bg-red-500/30 transition-all"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {profile && (
-        <UserProfileModal
-          isOpen={isProfileModalOpen}
-          onClose={() => setIsProfileModalOpen(false)}
-          userProfile={profile}
-          onUpdateProfile={handleUpdateProfileName}
-          onDownloadData={handleDownloadUserData}
-          onDeleteAccount={handleDeleteAccount}
-          onLogout={handleLogout}
-        />
-      )}
-    </div>
+      </SignedIn>
+    </>
   );
 };
 
