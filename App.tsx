@@ -676,7 +676,7 @@ const App: React.FC = () => {
       )}
 
       {/* Quick Log Input y Sugerencias (ahora flotante en la parte inferior) */}
-      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4">
         {suggestions.length > 0 && (
           <div className="space-y-4">
             {suggestions.map((suggestion, idx) => (
