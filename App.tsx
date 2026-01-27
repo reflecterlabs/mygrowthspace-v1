@@ -659,7 +659,7 @@ const App: React.FC = () => {
                           placeholder="Your 264-character identity statement..."
                         />
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-slate-500 font-black uppercase">{editingStatement.length}/264}</span>
+                          <span className="text-[10px] text-slate-500 font-black uppercase">{editingStatement.length}/264</span>
                           <div className="flex gap-2">
                             <button
                               onClick={() => setIsEditingStatement(false)}

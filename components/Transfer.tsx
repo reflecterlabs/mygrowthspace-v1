@@ -12,7 +12,7 @@ export default function Transfer() {
   const [amount, setAmount] = useState("");
   const [recipientAddress, setRecipientAddress] = useState("");
   const [encryptKey, setEncryptKey] = useState("");
-  const { fetchWallet } = useGetWallet(); // Corregido: usar fetchWallet
+  const { fetchWallet } = useGetWallet();
   const { transferAsync, isLoading: isLoadingTransfer } = useTransfer();
  
   const handleTransfer = async () => {
@@ -34,10 +34,15 @@ export default function Transfer() {
         throw new Error("No bearer token found from Clerk.");
       }
 
-      const wallet = await fetchWallet({ // Corregido: usar fetchWallet
-        externalUserId: user.id,
-        bearerToken: token,
+      const wallet = await fetchWallet({
+        getBearerToken: () => Promise.resolve(token), // Corregido: Pasar getBearerToken como función
       });
+
+      if (!wallet) {
+        showError("Failed to retrieve wallet. Please ensure it's created.");
+        dismissToast(toastId);
+        return;
+      }
   
       // make the transfer
       const transferResponse = await transferAsync({
@@ -48,8 +53,8 @@ export default function Transfer() {
             publicKey: wallet.publicKey,
             encryptedPrivateKey: wallet.encryptedPrivateKey,
           },
-          amount: Number(amount), // Corregido: convertir a number
-          token: "USDC" as ChainToken, // Asegúrate de que ChainToken esté correctamente importado o definido
+          amount: Number(amount),
+          token: "USDC" as ChainToken,
           recipient: recipientAddress,
         },
       });
