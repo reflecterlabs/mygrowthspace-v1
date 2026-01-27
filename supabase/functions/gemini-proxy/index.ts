@@ -34,34 +34,42 @@ serve(async (req: any) => {
     let result;
     switch (action) {
       case 'getDailyInspiration':
-        // Mantener en inglés ya que es una cita motivacional general
-        result = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: `Give me a daily motivational quote and a small actionable "atomic habit" step based on James Clear's principles for someone focusing on ${payload.userFocus}. Return it in JSON format in English.`,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                quote: { type: Type.STRING },
-                author: { type: Type.STRING },
-                actionStep: { type: Type.STRING }
-              },
-              required: ["quote", "author", "actionStep"]
+        try {
+          result = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: `Give me a daily motivational quote and a small actionable "atomic habit" step based on James Clear's principles for someone focusing on ${payload.userFocus}. Return it in JSON format in English.`,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  quote: { type: Type.STRING },
+                  author: { type: Type.STRING },
+                  actionStep: { type: Type.STRING }
+                },
+                required: ["quote", "author", "actionStep"]
+              }
             }
-          }
-        });
-        result = JSON.parse(result.text || '{}');
+          });
+          result = JSON.parse(result.text || '{}');
+        } catch (geminiError) {
+          console.error("[gemini-proxy] Error in getDailyInspiration Gemini call:", geminiError);
+          throw geminiError; // Re-throw to be caught by outer try-catch
+        }
         break;
 
       case 'analyzeHabitProgress':
-        // Mantener en inglés ya que es un insight general
-        result = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: `Review my current habits and completion data: ${JSON.stringify(payload.habits)}. 
-          Provide a brief, motivating one-sentence insight about my progress or a constructive tip for consistency based on "Atomic Habits" principles. MUST BE IN ENGLISH.`,
-        });
-        result = result.text;
+        try {
+          result = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: `Review my current habits and completion data: ${JSON.stringify(payload.habits)}. 
+            Provide a brief, motivating one-sentence insight about my progress or a constructive tip for consistency based on "Atomic Habits" principles. MUST BE IN ENGLISH.`,
+          });
+          result = result.text;
+        } catch (geminiError) {
+          console.error("[gemini-proxy] Error in analyzeHabitProgress Gemini call:", geminiError);
+          throw geminiError;
+        }
         break;
 
       case 'parseRoutineIntoHabits':
@@ -73,44 +81,49 @@ serve(async (req: any) => {
         
         console.log("[gemini-proxy] Sending prompt to Gemini for parseRoutineIntoHabits:", parseRoutinePrompt);
 
-        const geminiResponse = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: parseRoutinePrompt,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                habits: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      name: { type: Type.STRING },
-                      category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
-                      time: { type: Type.STRING },
-                      description: { type: Type.STRING },
-                      daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } }
-                    },
-                    required: ["name", "category", "daysOfWeek"]
-                  }
-                },
-                identity: { type: Type.STRING }
-              },
-              required: ["habits", "identity"]
-            }
-          }
-        });
-        
-        const rawGeminiText = geminiResponse.text;
-        console.log("[gemini-proxy] Raw Gemini response for parseRoutineIntoHabits:", rawGeminiText);
-
         try {
-          result = JSON.parse(rawGeminiText || '{}');
-          console.log("[gemini-proxy] Parsed Gemini response for parseRoutineIntoHabits:", result);
-        } catch (jsonError) {
-          console.error("[gemini-proxy] JSON parsing error for parseRoutineIntoHabits:", jsonError);
-          result = { habits: [], identity: "I am forging my new self." }; // Fallback
+          const geminiResponse = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: parseRoutinePrompt,
+            config: {
+              responseMimeType: "application/json",
+              // responseSchema: { // Temporalmente eliminado para depuración
+              //   type: Type.OBJECT,
+              //   properties: {
+              //     habits: {
+              //       type: Type.ARRAY,
+              //       items: {
+              //         type: Type.OBJECT,
+              //         properties: {
+              //           name: { type: Type.STRING },
+              //           category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
+              //           time: { type: Type.STRING },
+              //           description: { type: Type.STRING },
+              //           daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } }
+              //         },
+              //         required: ["name", "category", "daysOfWeek"]
+              //       }
+              //     },
+              //     identity: { type: Type.STRING }
+              //   },
+              //   required: ["habits", "identity"]
+              // }
+            }
+          });
+          
+          const rawGeminiText = geminiResponse.text;
+          console.log("[gemini-proxy] Raw Gemini response for parseRoutineIntoHabits:", rawGeminiText);
+
+          try {
+            result = JSON.parse(rawGeminiText || '{}');
+            console.log("[gemini-proxy] Parsed Gemini response for parseRoutineIntoHabits:", result);
+          } catch (jsonError) {
+            console.error("[gemini-proxy] JSON parsing error for parseRoutineIntoHabits:", jsonError);
+            result = { habits: [], identity: "I am forging my new self." }; // Fallback
+          }
+        } catch (geminiError) {
+          console.error("[gemini-proxy] Error in parseRoutineIntoHabits Gemini call:", geminiError);
+          throw geminiError; // Re-throw to be caught by outer try-catch
         }
         break;
 
@@ -141,51 +154,56 @@ serve(async (req: any) => {
         
         IMPORTANT: For habit categories, ONLY use one of these exact values: ${ALLOWED_CATEGORIES.join(', ')}.`;
 
-        result = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: prompt,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.STRING },
-                  title: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                  type: { type: Type.STRING },
-                  actionLabel: { type: Type.STRING },
-                  suggestedAction: {
-                    type: Type.OBJECT,
-                    properties: {
-                      type: { type: Type.STRING, description: "Must be 'create_habit'" },
-                      payload: { 
-                        type: Type.OBJECT,
-                        properties: {
-                          name: { type: Type.STRING },
-                          category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
-                          frequency: { type: Type.STRING, enum: ['daily', 'weekly', 'one-time'] }, // <--- Modificado aquí
-                          daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } },
-                          specificDates: { type: Type.ARRAY, items: { type: Type.STRING } },
-                          isOneTime: { type: Type.BOOLEAN },
-                          time: { type: Type.STRING },
-                          description: { type: Type.STRING },
-                          startDate: { type: Type.STRING },
-                          endDate: { type: Type.STRING }
-                        },
-                        required: ["name", "category"]
-                      }
-                    },
-                    required: ["type", "payload"]
-                  }
-                },
-                required: ["id", "title", "description", "type", "actionLabel", "suggestedAction"]
+        try {
+          result = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    id: { type: Type.STRING },
+                    title: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    type: { type: Type.STRING },
+                    actionLabel: { type: Type.STRING },
+                    suggestedAction: {
+                      type: Type.OBJECT,
+                      properties: {
+                        type: { type: Type.STRING, description: "Must be 'create_habit'" },
+                        payload: { 
+                          type: Type.OBJECT,
+                          properties: {
+                            name: { type: Type.STRING },
+                            category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
+                            frequency: { type: Type.STRING, enum: ['daily', 'weekly', 'one-time'] }, // <--- Modificado aquí
+                            daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } },
+                            specificDates: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            isOneTime: { type: Type.BOOLEAN },
+                            time: { type: Type.STRING },
+                            description: { type: Type.STRING },
+                            startDate: { type: Type.STRING },
+                            endDate: { type: Type.STRING }
+                          },
+                          required: ["name", "category"]
+                        }
+                      },
+                      required: ["type", "payload"]
+                    }
+                  },
+                  required: ["id", "title", "description", "type", "actionLabel", "suggestedAction"]
+                }
               }
             }
-          }
-        });
-        result = JSON.parse(result.text || '[]');
+          });
+          result = JSON.parse(result.text || '[]');
+        } catch (geminiError) {
+          console.error("[gemini-proxy] Error in generateSuggestedCards Gemini call:", geminiError);
+          throw geminiError;
+        }
         break;
 
       default:
@@ -202,8 +220,8 @@ serve(async (req: any) => {
     });
 
   } catch (error) {
-    console.error("[gemini-proxy] Error processing request:", error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
+    console.error("[gemini-proxy] General error processing request:", (error as Error).message, error); // Log full error object
+    return new Response(JSON.stringify({ error: (error as Error).message || "An unknown error occurred in the proxy function." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
