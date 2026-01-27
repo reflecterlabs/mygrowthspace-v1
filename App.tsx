@@ -269,7 +269,7 @@ const App: React.FC = () => {
           completedDates: insertedHabit.completed_dates || [],
           createdAt: insertedHabit.created_at || new Date().toISOString(),
           startDate: insertedHabit.start_date,
-          endDate: insertedHabit.end_date,
+          endDate: insertedHabit.end_date, // Corregido: insertedHabget a insertedHabit
           specificDates: insertedHabit.specific_dates,
           isOneTime: insertedHabit.is_one_time,
           lastCompletedDate: insertedHabit.last_completed_date
@@ -676,7 +676,7 @@ const App: React.FC = () => {
       )}
 
       {/* Quick Log Input y Sugerencias (ahora flotante en la parte inferior) */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4">
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-30 flex flex-col gap-4">
         {suggestions.length > 0 && (
           <div className="space-y-4">
             {suggestions.map((suggestion, idx) => (
