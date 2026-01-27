@@ -680,7 +680,7 @@ const App: React.FC = () => {
       {/* Floating Add Habit Button */}
       <button
         onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 w-16 h-16 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-all active:scale-95 drop-shadow-[0_0_20px_rgba(6,182,212,0.5)]"
+        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-16 h-16 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-all active:scale-95 drop-shadow-[0_0_20px_rgba(6,182,212,0.5)]"
       >
         <Plus size={32} strokeWidth={3} />
       </button>
