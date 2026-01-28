@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { useCreateWallet, useGetWallet, useGetBalance, ChainToken } from "@chipi-stack/chipi-react";
 import { showSuccess, showError, showLoading, dismissToast } from '../src/utils/toast';
@@ -7,46 +7,47 @@ import { Loader2, Wallet, Copy, RefreshCw, CheckCircle2, Plus } from 'lucide-rea
 export default function CreateWallet() {
   const { user } = useUser();
   const { getToken } = useAuth();
-  const { createWalletAsync, isLoading: isCreating } = useCreateWallet();
-  const { fetchWallet, isLoading: isFetchingWallet } = useGetWallet();
-  const { fetchBalance, isLoading: isFetchingBalance } = useGetBalance();
-  
-  const [walletData, setWalletData] = useState<any>(null);
-  const [balance, setBalance] = useState<number | null>(null);
   const [encryptKey, setEncryptKey] = useState("");
   const [copied, setCopied] = useState(false);
   const [showCreateNew, setShowCreateNew] = useState(false);
 
-  const loadWalletInfo = useCallback(async () => {
-    if (!user?.id) return;
-    
-    try {
+  const { 
+    data: walletData, 
+    isLoading: isFetchingWallet, 
+    refetch: refetchWallet 
+  } = useGetWallet({
+    params: {
+      externalUserId: user?.id || "",
+    },
+    getBearerToken: async () => {
       const token = await getToken();
-      if (!token) return;
+      if (!token) throw new Error("No token found");
+      return token;
+    },
+    queryOptions: {
+      enabled: Boolean(user?.id),
+    },
+  });
 
-      const wallet = await fetchWallet({
-        getBearerToken: () => Promise.resolve(token)
-      });
-
-      if (wallet) {
-        setWalletData(wallet);
-        const balanceResponse = await fetchBalance({
-          getBearerToken: () => Promise.resolve(token),
-          params: {
-            address: wallet.publicKey,
-            token: "USDC" as ChainToken
-          }
-        });
-        setBalance(balanceResponse || 0);
+  const { 
+    data: balanceData, 
+    isLoading: isFetchingBalance,
+    refetch: refetchBalance
+  } = useGetBalance(
+    walletData ? {
+      address: walletData.publicKey,
+      token: "USDC" as ChainToken
+    } : null,
+    {
+      getBearerToken: async () => {
+        const token = await getToken();
+        if (!token) throw new Error("No token found");
+        return token;
       }
-    } catch (error) {
-      console.error("Error loading wallet info:", error);
     }
-  }, [user?.id, getToken, fetchWallet, fetchBalance]);
+  );
 
-  useEffect(() => {
-    loadWalletInfo();
-  }, [loadWalletInfo]);
+  const { createWalletAsync, isLoading: isCreating } = useCreateWallet();
 
   const handleCreateWallet = async () => {
     if (!encryptKey) {
@@ -70,7 +71,7 @@ export default function CreateWallet() {
       showSuccess("New wallet created successfully!");
       setEncryptKey("");
       setShowCreateNew(false);
-      await loadWalletInfo(); 
+      refetchWallet();
     } catch (error: any) {
       showError(error.message || "Failed to create wallet");
     } finally {
@@ -85,6 +86,11 @@ export default function CreateWallet() {
       setTimeout(() => setCopied(false), 2000);
       showSuccess("Address copied to clipboard");
     }
+  };
+
+  const handleRefresh = () => {
+    refetchWallet();
+    refetchBalance();
   };
 
   if (isFetchingWallet) {
@@ -115,7 +121,7 @@ export default function CreateWallet() {
           )}
           {walletData && (
             <button 
-              onClick={loadWalletInfo}
+              onClick={handleRefresh}
               disabled={isFetchingBalance}
               className={`text-slate-500 hover:text-cyan-400 transition-colors p-1 ${isFetchingBalance ? 'animate-spin' : ''}`}
             >
@@ -131,7 +137,7 @@ export default function CreateWallet() {
             <div className="space-y-1">
               <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Available Balance</p>
               <h3 className="text-3xl font-black text-white tracking-tight">
-                {balance !== null ? balance.toLocaleString() : '---'} <span className="text-cyan-400 text-lg">USDC</span>
+                {balanceData !== undefined ? balanceData.toLocaleString() : '---'} <span className="text-cyan-400 text-lg">USDC</span>
               </h3>
             </div>
             

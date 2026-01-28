@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { useTransfer, useGetWallet, useGetBalance, ChainToken } from "@chipi-stack/chipi-react";
 import { showSuccess, showError, showLoading, dismissToast } from '../src/utils/toast';
@@ -10,40 +10,40 @@ export default function Transfer() {
   const [amount, setAmount] = useState("");
   const [recipientAddress, setRecipientAddress] = useState("");
   const [encryptKey, setEncryptKey] = useState("");
-  const [balance, setBalance] = useState<number | null>(null);
-  
-  const { fetchWallet } = useGetWallet();
-  const { fetchBalance, isLoading: isFetchingBalance } = useGetBalance();
-  const { transferAsync, isLoading: isLoadingTransfer } = useTransfer();
- 
-  const loadBalance = useCallback(async () => {
-    if (!user?.id) return;
-    try {
+
+  const { data: walletData } = useGetWallet({
+    params: {
+      externalUserId: user?.id || "",
+    },
+    getBearerToken: async () => {
       const token = await getToken();
-      if (!token) return;
+      if (!token) throw new Error("No token found");
+      return token;
+    },
+    queryOptions: {
+      enabled: Boolean(user?.id),
+    },
+  });
 
-      const wallet = await fetchWallet({
-        getBearerToken: () => Promise.resolve(token)
-      });
-
-      if (wallet) {
-        const balanceResponse = await fetchBalance({
-          getBearerToken: () => Promise.resolve(token),
-          params: {
-            address: wallet.publicKey,
-            token: "USDC" as ChainToken
-          }
-        });
-        setBalance(balanceResponse || 0);
+  const { 
+    data: balance, 
+    isLoading: isFetchingBalance,
+    refetch: refetchBalance 
+  } = useGetBalance(
+    walletData ? {
+      address: walletData.publicKey,
+      token: "USDC" as ChainToken
+    } : null,
+    {
+      getBearerToken: async () => {
+        const token = await getToken();
+        if (!token) throw new Error("No token found");
+        return token;
       }
-    } catch (e) {
-      console.error("Error loading balance for transfer:", e);
     }
-  }, [user?.id, getToken, fetchWallet, fetchBalance]);
+  );
 
-  useEffect(() => {
-    loadBalance();
-  }, [loadBalance]);
+  const { transferAsync, isLoading: isLoadingTransfer } = useTransfer();
 
   const handleTransfer = async () => {
     if (!amount || !recipientAddress || !encryptKey) {
@@ -51,7 +51,7 @@ export default function Transfer() {
       return;
     }
 
-    if (balance !== null && Number(amount) > balance) {
+    if (balance !== undefined && Number(amount) > balance) {
       showError("Insufficient balance");
       return;
     }
@@ -61,11 +61,7 @@ export default function Transfer() {
       const token = await getToken();
       if (!token) throw new Error("Authentication failed");
 
-      const wallet = await fetchWallet({
-        getBearerToken: () => Promise.resolve(token),
-      });
-
-      if (!wallet) {
+      if (!walletData) {
         showError("Wallet not found");
         dismissToast(toastId);
         return;
@@ -76,8 +72,8 @@ export default function Transfer() {
         params: {
           encryptKey,
           wallet: {
-            publicKey: wallet.publicKey,
-            encryptedPrivateKey: wallet.encryptedPrivateKey,
+            publicKey: walletData.publicKey,
+            encryptedPrivateKey: walletData.encryptedPrivateKey,
           },
           amount: Number(amount),
           token: "USDC" as ChainToken,
@@ -89,7 +85,7 @@ export default function Transfer() {
       setAmount("");
       setRecipientAddress("");
       setEncryptKey("");
-      loadBalance(); // Refresh balance
+      refetchBalance(); 
       
     } catch (error: any) {
       showError(error.message || "Transfer failed");
