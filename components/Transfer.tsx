@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useUser, useAuth } from "@clerk/clerk-react";
-import { useTransfer, useGetWallet, useGetBalance, ChainToken } from "@chipi-stack/chipi-react";
+import { useTransfer, useGetWallet, useBalance, ChainToken } from "@chipi-stack/chipi-react";
 import { showSuccess, showError, showLoading, dismissToast } from '../src/utils/toast';
 import { Send, Loader2, Wallet } from 'lucide-react';
 
@@ -13,7 +13,7 @@ export default function Transfer() {
   const [balance, setBalance] = useState<number | null>(null);
   
   const { fetchWallet } = useGetWallet();
-  const { fetchBalance, isLoading: isFetchingBalance } = useGetBalance();
+  const { fetchBalance, isLoading: isFetchingBalance } = useBalance();
   const { transferAsync, isLoading: isLoadingTransfer } = useTransfer();
  
   const loadBalance = useCallback(async () => {
