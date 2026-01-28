@@ -88,8 +88,8 @@ const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: n
 
 
 const App: React.FC = () => {
-  const { isSignedIn, isLoaded, getToken, signOut } = useAuth(); // 'user' ya no se desestructura de useAuth
-  const { user } = useUser(); // 'user' se desestructura de useUser
+  const { isSignedIn, isLoaded, getToken, signOut } = useAuth();
+  const { user } = useUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'onboarding' | 'ready' | 'error'>('idle');
@@ -104,7 +104,7 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null); // Nuevo estado para el ID de usuario de Supabase (UUID)
+  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null); // Estado para el ID de usuario de Supabase (TEXT)
 
   // --- Funciones de manejo de datos y eventos ---
 
@@ -129,13 +129,13 @@ const App: React.FC = () => {
   };
 
   const saveHabit = async (habitData: Partial<Habit>) => {
-    if (!habitData.name || !supabaseUserId) return; // Usar supabaseUserId
+    if (!habitData.name || !supabaseUserId) return;
     const toastId = showLoading('Deploying protocol...');
     try {
       const { data: existing, error: selectErr } = await supabase
         .from('habits')
         .select('id')
-        .eq('user_id', supabaseUserId) // Usar supabaseUserId
+        .eq('user_id', supabaseUserId)
         .eq('name', habitData.name)
         .maybeSingle();
 
@@ -149,7 +149,7 @@ const App: React.FC = () => {
       }
 
       const { data: newHabitData, error: insertError } = await supabase.from('habits').insert({
-        user_id: supabaseUserId, // Usar supabaseUserId
+        user_id: supabaseUserId,
         name: habitData.name,
         category: habitData.category,
         frequency: habitData.isOneTime ? 'one-time' : (habitData.frequency || 'daily'),
@@ -204,49 +204,32 @@ const App: React.FC = () => {
 
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
     console.log("App: Completando onboarding...");
-    if (!supabaseUserId) { // Usar supabaseUserId
+    if (!supabaseUserId) {
       showError('Authentication error: Supabase user ID not found.');
       setProfileStatus('error');
       return;
     }
     const toastId = showLoading('Activating protocols...');
     try {
-      // 1. Fetch the existing profile to get its 'id'
-      const { data: existingProfile, error: fetchProfileError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('user_id', supabaseUserId) // Usar supabaseUserId
-        .maybeSingle();
-
-      if (fetchProfileError) {
-        console.error("App: Error fetching existing profile for onboarding update:", fetchProfileError);
-        throw fetchProfileError;
-      }
-
-      if (!existingProfile) {
-        console.error("App: No existing profile found for user during onboarding completion. This should not happen if handle_new_user trigger worked.");
-        throw new Error("No existing profile found.");
-      }
-
-      // 2. Update the existing profile with onboarding data and set has_completed_onboarding to true
+      // 1. Actualizar el perfil existente con los datos de onboarding y establecer has_completed_onboarding a true
       const { error: profileUpdateError } = await supabase.from('user_profiles').update({
         name: newProfile.name,
-        email: user?.emailAddresses[0]?.emailAddress,
+        email: user?.emailAddresses[0]?.emailAddress, // Usar el email de Clerk
         identity_statement: newProfile.identityStatement,
         focus_areas: newProfile.focusAreas,
         narrative: newProfile.narrative,
         has_completed_onboarding: true
-      }).eq('user_id', supabaseUserId); // Usar supabaseUserId
+      }).eq('id', supabaseUserId); // Usar 'id' que ahora es el ID de Clerk
 
       if (profileUpdateError) {
         console.error("App: Error al actualizar el perfil en onboarding:", profileUpdateError);
         throw profileUpdateError;
       }
 
-      // 3. Insert new habits
+      // 2. Insertar nuevos hábitos
       if (newHabits.length > 0) {
         const habitsToInsert = newHabits.map(h => ({
-          user_id: supabaseUserId, // Usar supabaseUserId
+          user_id: supabaseUserId,
           name: h.name,
           category: h.category,
           frequency: h.frequency,
@@ -284,10 +267,10 @@ const App: React.FC = () => {
   };
 
   const confirmDeleteHabit = async () => {
-    if (!habitToDelete || !supabaseUserId) return; // Usar supabaseUserId
+    if (!habitToDelete || !supabaseUserId) return;
     const toastId = showLoading('Deleting habit...');
     try {
-      await supabase.from('habits').delete().eq('id', habitToDelete).eq('user_id', supabaseUserId); // Añadir user_id para RLS
+      await supabase.from('habits').delete().eq('id', habitToDelete).eq('user_id', supabaseUserId);
       setHabits(prev => prev.filter(h => h.id !== habitToDelete));
       showSuccess('Habit deleted successfully!');
       setHabitToDelete(null);
@@ -301,7 +284,7 @@ const App: React.FC = () => {
   };
 
   const toggleHabitCompletion = async (habitId: string, date: string) => {
-    if (!supabaseUserId) return; // Usar supabaseUserId
+    if (!supabaseUserId) return;
     try {
       const habit = habits.find(h => h.id === habitId);
       if (!habit) return;
@@ -328,7 +311,7 @@ const App: React.FC = () => {
           last_completed_date: newLastCompletedDate
         })
         .eq('id', habitId)
-        .eq('user_id', supabaseUserId); // Añadir user_id para RLS
+        .eq('user_id', supabaseUserId);
 
       if (error) {
         console.error('App: Error updating habit completion:', error);
@@ -354,12 +337,12 @@ const App: React.FC = () => {
   };
 
   const saveStatement = async () => {
-    if (!editingStatement.trim() || !profile || !supabaseUserId) return; // Usar supabaseUserId
+    if (!editingStatement.trim() || !profile || !supabaseUserId) return;
     const toastId = showLoading('Updating identity statement...');
     try {
       await supabase.from('user_profiles').update({
         identity_statement: editingStatement
-      }).eq('user_id', supabaseUserId); // Usar supabaseUserId
+      }).eq('id', supabaseUserId); // Usar 'id' que ahora es el ID de Clerk
       setProfile({ ...profile, identityStatement: editingStatement });
       setIsEditingStatement(false);
       showSuccess('Identity statement updated!');
@@ -372,14 +355,14 @@ const App: React.FC = () => {
   };
 
   const handleUpdateProfileName = async (newName: string) => {
-    if (!profile || !supabaseUserId) { // Usar supabaseUserId
+    if (!profile || !supabaseUserId) {
       throw new Error("User or profile not available.");
     }
     try {
       const { error } = await supabase
         .from('user_profiles')
         .update({ name: newName })
-        .eq('user_id', supabaseUserId); // Usar supabaseUserId
+        .eq('id', supabaseUserId); // Usar 'id' que ahora es el ID de Clerk
 
       if (error) throw error;
       setProfile(prev => prev ? { ...prev, name: newName } : null);
@@ -445,7 +428,7 @@ const App: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!supabaseUserId) { // Usar supabaseUserId
+    if (!supabaseUserId) {
       console.error("App: No Supabase user ID available for deletion.");
       throw new Error("Authentication details missing for account deletion.");
     }
@@ -453,10 +436,14 @@ const App: React.FC = () => {
     const toastId = showLoading('Deleting account...');
     try {
       // Primero, eliminar los datos del perfil del usuario de Supabase
+      // La tabla user_profiles tiene una clave foránea con CASCADE DELETE a auth.users(id)
+      // Sin embargo, para asegurar que se elimine el perfil antes de intentar eliminar el usuario de auth.users
+      // (que podría fallar si el perfil aún existe debido a restricciones),
+      // es mejor eliminar explícitamente el perfil primero.
       const { error: supabaseProfileDeleteError } = await supabase
         .from('user_profiles')
         .delete()
-        .eq('user_id', supabaseUserId); // Usar supabaseUserId
+        .eq('id', supabaseUserId); // Usar 'id' que ahora es el ID de Clerk
 
       if (supabaseProfileDeleteError) {
         console.error("App: Error deleting Supabase profile:", supabaseProfileDeleteError);
@@ -464,7 +451,7 @@ const App: React.FC = () => {
       }
 
       // Luego, invocar la función Edge para eliminar el usuario de auth.users
-      const clerkToken = await getToken({ template: 'supabase' }); // Necesitamos el token de Clerk para la función Edge
+      const clerkToken = await getToken({ template: 'supabase' });
       if (!clerkToken) {
         throw new Error("Clerk token not found for account deletion.");
       }
@@ -515,24 +502,18 @@ const App: React.FC = () => {
         console.log("App: Iniciando loadUserData...");
         setProfileStatus('loading');
         try {
-          // IMPORTANTE: Configura una plantilla JWT llamada 'supabase' en tu panel de control de Clerk.
-          // Esta plantilla DEBE incluir el UUID del usuario de Supabase en la reclamación 'sub'.
-          // Ejemplo de payload para la plantilla JWT de Clerk:
-          // {
-          //   "sub": "{{user.public_metadata.supabase_user_id}}", // Asumiendo que almacenas el UUID de Supabase en public_metadata de Clerk
-          //   "email": "{{user.email_addresses.0.email_address}}"
-          // }
-          // Necesitarías un webhook o una función backend para poblar `user.public_metadata.supabase_user_id`
-          // cuando un usuario de Clerk se registra por primera vez y se vincula a un usuario de Supabase.
+          // Obtener el token de Clerk con la plantilla 'supabase'
           const clerkToken = await getToken({ template: 'supabase' });
           if (!clerkToken) {
             throw new Error("Clerk token not found. Ensure 'supabase' JWT template is configured in Clerk and returns a valid token.");
           }
 
           // Establecer la sesión de Supabase con el token de Clerk
+          // Supabase espera un refresh_token, pero Clerk solo proporciona un access_token para la sesión.
+          // Para satisfacer el tipo, pasamos el access_token como refresh_token también.
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token: clerkToken,
-            refresh_token: clerkToken, // Solución: Pasar clerkToken como refresh_token para satisfacer el tipo
+            refresh_token: clerkToken, // Usar access_token como refresh_token para compatibilidad
           });
 
           if (sessionError) {
@@ -548,13 +529,14 @@ const App: React.FC = () => {
             return;
           }
 
-          setSupabaseUserId(currentSupabaseUser.id); // Almacenar el UUID del usuario de Supabase
+          // El ID de usuario de Supabase ahora es el user.id de Clerk (TEXT)
+          setSupabaseUserId(currentSupabaseUser.id);
 
           // Ahora usar currentSupabaseUser.id para todas las consultas
           const { data: profileData, error: profileError } = await supabase
             .from('user_profiles')
             .select('*')
-            .eq('user_id', currentSupabaseUser.id) // Usar el ID de usuario de Supabase (UUID)
+            .eq('id', currentSupabaseUser.id) // Usar 'id' que ahora es el ID de Clerk
             .maybeSingle();
 
           if (profileError) {
@@ -584,7 +566,7 @@ const App: React.FC = () => {
             const { data: habitsData, error: habitsError } = await supabase
               .from('habits')
               .select('*')
-              .eq('user_id', currentSupabaseUser.id); // Usar el ID de usuario de Supabase (UUID)
+              .eq('user_id', currentSupabaseUser.id); // Usar el ID de usuario de Supabase (TEXT)
 
             if (habitsError) {
               console.error("App: Error al obtener datos de hábitos:", habitsError);
