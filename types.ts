@@ -24,6 +24,7 @@ export interface UserProfile {
   focusAreas: string[];
   narrative?: string;
   themeColor?: string;
+  language?: string;
 }
 
 export interface MotivationTip {

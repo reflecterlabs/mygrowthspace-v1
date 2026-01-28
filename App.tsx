@@ -17,6 +17,7 @@ import { createClerkSupabaseClient } from './src/lib/supabaseClient';
 import { Habit, UserProfile, SuggestedCard } from './types';
 import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
 import { generateSuggestedCards } from './services/geminiService';
+import { getTranslation } from './src/lib/translations';
 
 const calculateStreak = (_habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
   const sortedDates = [...allCompletedDates].sort();
@@ -67,6 +68,8 @@ const App: React.FC = () => {
 
   const supabase = useMemo(() => createClerkSupabaseClient(getToken), [getToken]);
 
+  const t = (key: any) => getTranslation(profile?.language, key);
+
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user) {
       if (isLoaded && !isSignedIn) setProfileStatus('idle');
@@ -107,7 +110,8 @@ const App: React.FC = () => {
             identityStatement: profileData.identity_statement,
             focusAreas: profileData.focus_areas,
             narrative: profileData.narrative,
-            themeColor: profileData.theme_color || '#06b6d4'
+            themeColor: profileData.theme_color || '#06b6d4',
+            language: profileData.language || 'en'
           });
 
           // Apply saved hex color
@@ -152,7 +156,8 @@ const App: React.FC = () => {
         focus_areas: newProfile.focusAreas,
         narrative: newProfile.narrative,
         has_completed_onboarding: true,
-        theme_color: '#06b6d4'
+        theme_color: '#06b6d4',
+        language: 'en'
       });
       
       if (pErr) throw pErr;
@@ -198,7 +203,7 @@ const App: React.FC = () => {
       const { error } = await supabase.from('habits').delete().eq('id', habitId).eq('user_id', user.id);
       if (error) throw error;
       setHabits(prev => prev.filter(h => h.id !== habitId));
-      showSuccess('Protocol and all recurrences terminated');
+      showSuccess('Protocol terminated');
       setDeleteConfirmation(null);
     } catch (e) {
       showError('Failed to delete');
@@ -277,6 +282,7 @@ const App: React.FC = () => {
     const dbUpdates: any = {};
     if (updates.name) dbUpdates.name = updates.name;
     if (updates.themeColor) dbUpdates.theme_color = updates.themeColor;
+    if (updates.language) dbUpdates.language = updates.language;
     
     const { error } = await supabase.from('user_profiles').update(dbUpdates).eq('id', user.id);
     if (error) throw error;
@@ -292,9 +298,9 @@ const App: React.FC = () => {
       <SignedOut>
         <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-8 text-center">
           <div className="w-20 h-20 bg-primary-500/10 rounded-3xl flex items-center justify-center text-primary-500 mb-8 border border-primary-500/20"><UserIcon size={40} /></div>
-          <h1 className="text-4xl font-black text-white mb-4 tracking-tighter">My Growth Space</h1>
+          <h1 className="text-4xl font-black text-white mb-4 tracking-tighter">{t('appName')}</h1>
           <SignInButton mode="modal">
-            <button className="bg-white text-black px-12 py-5 rounded-[2rem] font-black text-lg shadow-2xl">Establish Link</button>
+            <button className="bg-white text-black px-12 py-5 rounded-[2rem] font-black text-lg shadow-2xl">{t('establishLink')}</button>
           </SignInButton>
         </div>
       </SignedOut>
@@ -304,7 +310,7 @@ const App: React.FC = () => {
           <div className="min-h-screen bg-[#0a0a0c] text-white pb-48">
             <nav className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0a0a0c]/80 backdrop-blur-md sticky top-0 z-30">
               <div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">My Growth Space</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('appName')}</p>
                 <h2 className="text-2xl font-black tracking-tight">{profile?.name}</h2>
               </div>
               <button onClick={() => setIsProfileModalOpen(true)} className="p-3 bg-white/5 border border-white/10 rounded-2xl"><UserIcon size={20} className="text-primary-500" /></button>
@@ -331,7 +337,7 @@ const App: React.FC = () => {
                       onEdit={(habit) => { setEditingHabit(habit); setIsEditModalOpen(true); }} 
                     />
                   ))}
-                  {filteredHabits.length === 0 && <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">No active protocols in this vector.</div>}
+                  {filteredHabits.length === 0 && <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">No active protocols.</div>}
                 </div>
               </main>
             ) : (
@@ -349,11 +355,11 @@ const App: React.FC = () => {
               <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
                 <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-sm w-full text-center shadow-2xl">
                   <AlertCircle size={40} className="text-red-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-black text-white mb-2">Terminate Protocol?</h3>
-                  <p className="text-slate-400 text-xs mb-8">This will delete the habit and all its recurring instances from your schedule.</p>
+                  <h3 className="text-xl font-black text-white mb-2">{t('deleteHabitTitle')}</h3>
+                  <p className="text-slate-400 text-xs mb-8">{t('deleteHabitDesc')}</p>
                   <div className="flex gap-4">
-                    <button onClick={() => setDeleteConfirmation(null)} className="flex-1 py-3 bg-white/5 rounded-2xl text-white font-black">Cancel</button>
-                    <button onClick={() => confirmDeleteHabit(deleteConfirmation)} className="flex-1 py-3 bg-red-500/20 rounded-2xl text-red-400 font-black">Confirm</button>
+                    <button onClick={() => setDeleteConfirmation(null)} className="flex-1 py-3 bg-white/5 rounded-2xl text-white font-black">{t('cancel')}</button>
+                    <button onClick={() => confirmDeleteHabit(deleteConfirmation)} className="flex-1 py-3 bg-red-500/20 rounded-2xl text-red-400 font-black">{t('confirm')}</button>
                   </div>
                 </div>
               </div>

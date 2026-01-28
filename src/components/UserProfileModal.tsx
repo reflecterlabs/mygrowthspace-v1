@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Download, Trash2, LogOut, AlertCircle, Check, Settings, Palette, Plus, Save } from 'lucide-react';
+import { X, User, Download, Trash2, LogOut, AlertCircle, Check, Settings, Palette, Plus, Save, Globe } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { showSuccess, showError, showLoading, dismissToast } from '../utils/toast';
 import CreateWallet from '../../components/CreateWallet';
 import Transfer from '../../components/Transfer';
+import { getTranslation } from '../lib/translations';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -23,6 +24,15 @@ const COLORS = [
   { name: 'Rose', hex: '#f43f5e' },
 ];
 
+const LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Español' },
+  { code: 'pt', name: 'Português' },
+  { code: 'hi', name: 'हिंदी' },
+  { code: 'ru', name: 'Русский' },
+  { code: 'zh', name: '中文' },
+];
+
 type TabType = 'profile' | 'finance';
 
 const UserProfileModal: React.FC<UserProfileModalProps> = ({
@@ -37,19 +47,22 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [editingName, setEditingName] = useState(userProfile.name);
   const [pendingColor, setPendingColor] = useState(userProfile.themeColor || '#06b6d4');
+  const [pendingLanguage, setPendingLanguage] = useState(userProfile.language || 'en');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const colorInputRef = useRef<HTMLInputElement>(null);
+
+  const t = (key: any) => getTranslation(userProfile.language, key);
 
   useEffect(() => {
     if (isOpen) {
       setEditingName(userProfile.name);
       setPendingColor(userProfile.themeColor || '#06b6d4');
+      setPendingLanguage(userProfile.language || 'en');
       setActiveTab('profile');
     }
-  }, [isOpen, userProfile.name, userProfile.themeColor]);
+  }, [isOpen, userProfile.name, userProfile.themeColor, userProfile.language]);
 
-  // Preview color immediately
   const handlePreviewColor = (hex: string) => {
     setPendingColor(hex);
     document.documentElement.style.setProperty('--primary-color', hex);
@@ -63,6 +76,16 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     } catch (e) {
       showError('Failed to update theme');
     } finally { dismissToast(toastId); }
+  };
+
+  const handleSaveLanguage = async (lang: string) => {
+    setPendingLanguage(lang);
+    try {
+      await onUpdateProfile({ language: lang });
+      showSuccess('Language updated!');
+    } catch (error) {
+      showError('Failed to update language');
+    }
   };
 
   const handleSaveName = async () => {
@@ -92,9 +115,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
         <div className="mb-6">
           <div className="flex items-center space-x-2 text-primary-500 mb-2">
             <Settings size={20} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Protocol Management</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">{t('settingsProtocol')}</span>
           </div>
-          <h2 className="text-2xl font-black text-white">System Settings</h2>
+          <h2 className="text-2xl font-black text-white">{t('settingsTitle')}</h2>
         </div>
 
         <div className="flex bg-white/5 p-1 rounded-2xl mb-8 border border-white/5">
@@ -102,13 +125,13 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             onClick={() => setActiveTab('profile')} 
             className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'profile' ? 'bg-primary-500 text-black' : 'text-slate-500'}`}
           >
-            General
+            {t('settingsGeneral')}
           </button>
           <button 
             onClick={() => setActiveTab('finance')} 
             className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'finance' ? 'bg-primary-500 text-black' : 'text-slate-500'}`}
           >
-            Finances
+            {t('settingsFinance')}
           </button>
         </div>
 
@@ -118,11 +141,29 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <section className="space-y-4">
                 <div className="flex items-center space-x-2 text-slate-500">
                   <User size={14} className="text-primary-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Identity</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{t('settingsIdentity')}</span>
                 </div>
                 <div className="flex items-center space-x-3 bg-white/5 border border-white/5 rounded-2xl p-1 pr-4">
                   <input className="bg-transparent text-white outline-none font-bold w-full p-3" value={editingName} onChange={(e) => setEditingName(e.target.value)} />
                   <button onClick={handleSaveName} className="bg-primary-500/20 text-primary-500 p-2 rounded-xl"><Check size={18} /></button>
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <div className="flex items-center space-x-2 text-slate-500">
+                  <Globe size={14} className="text-primary-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{t('settingsLanguage')}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {LANGUAGES.map(lang => (
+                    <button 
+                      key={lang.code}
+                      onClick={() => handleSaveLanguage(lang.code)}
+                      className={`py-3 px-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all border ${pendingLanguage === lang.code ? 'bg-primary-500 text-black border-primary-500' : 'bg-white/5 text-slate-500 border-white/5'}`}
+                    >
+                      {lang.name}
+                    </button>
+                  ))}
                 </div>
               </section>
 
@@ -165,16 +206,16 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     className="w-full bg-primary-500 text-black rounded-2xl py-4 font-black text-xs uppercase tracking-widest flex items-center justify-center space-x-2 animate-in slide-in-from-bottom-2"
                   >
                     <Save size={16} />
-                    <span>Apply Theme Configuration</span>
+                    <span>{t('settingsTheme')}</span>
                   </button>
                 )}
               </section>
 
               <section className="pt-8 border-t border-white/5 space-y-3">
-                <button onClick={onDownloadData} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 text-white font-black text-sm flex items-center justify-center space-x-2"><Download size={18} /><span>Archive Data Package</span></button>
+                <button onClick={onDownloadData} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 text-white font-black text-sm flex items-center justify-center space-x-2"><Download size={18} /><span>{t('settingsArchive')}</span></button>
                 <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => setShowLogoutConfirm(true)} className="bg-red-500/10 border border-red-500/20 rounded-2xl py-4 text-red-400 font-black text-sm flex items-center justify-center space-x-2"><LogOut size={16} /><span>Sign Out</span></button>
-                  <button onClick={() => setShowDeleteConfirm(true)} className="bg-red-500/20 border border-red-500/30 rounded-2xl py-4 text-red-500 font-black text-sm flex items-center justify-center space-x-2"><Trash2 size={16} /><span>Terminate</span></button>
+                  <button onClick={() => setShowLogoutConfirm(true)} className="bg-red-500/10 border border-red-500/20 rounded-2xl py-4 text-red-400 font-black text-sm flex items-center justify-center space-x-2"><LogOut size={16} /><span>{t('settingsSignOut')}</span></button>
+                  <button onClick={() => setShowDeleteConfirm(true)} className="bg-red-500/20 border border-red-500/30 rounded-2xl py-4 text-red-500 font-black text-sm flex items-center justify-center space-x-2"><Trash2 size={16} /><span>{t('settingsTerminate')}</span></button>
                 </div>
               </section>
             </div>
@@ -192,8 +233,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <AlertCircle size={40} className="text-red-500 mx-auto mb-4" />
               <h3 className="text-xl font-black text-white mb-4">Confirm Logout</h3>
               <div className="flex gap-4">
-                <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 py-3 bg-white/5 rounded-2xl text-white font-black">No</button>
-                <button onClick={onLogout} className="flex-1 py-3 bg-red-500/20 rounded-2xl text-red-400 font-black">Yes</button>
+                <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 py-3 bg-white/5 rounded-2xl text-white font-black">{t('cancel')}</button>
+                <button onClick={onLogout} className="flex-1 py-3 bg-red-500/20 rounded-2xl text-red-400 font-black">{t('confirm')}</button>
               </div>
             </div>
           </div>
@@ -203,11 +244,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
             <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center">
               <AlertCircle size={40} className="text-red-500 mx-auto mb-4" />
-              <h3 className="text-xl font-black text-white mb-4">Delete Account?</h3>
+              <h3 className="text-xl font-black text-white mb-4">{t('deleteHabitTitle')}</h3>
               <p className="text-slate-400 text-sm mb-8">This action is irreversible.</p>
               <div className="flex gap-4">
-                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 bg-white/5 rounded-2xl text-white font-black">Cancel</button>
-                <button onClick={onDeleteAccount} className="flex-1 py-3 bg-red-500/20 rounded-2xl text-red-400 font-black">Delete</button>
+                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 bg-white/5 rounded-2xl text-white font-black">{t('cancel')}</button>
+                <button onClick={onDeleteAccount} className="flex-1 py-3 bg-red-500/20 rounded-2xl text-red-400 font-black">{t('confirm')}</button>
               </div>
             </div>
           </div>
