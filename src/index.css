@@ -2,7 +2,7 @@
 
 @layer base {
   :root {
-    --primary-rgb: 6, 182, 212; /* Cyan Default */
+    --primary-color: #06b6d4; /* Default Cyan Hex */
   }
   
   body {
@@ -11,6 +11,6 @@
 }
 
 @theme {
-  --color-primary-500: rgb(var(--primary-rgb));
-  --color-primary-600: rgba(var(--primary-rgb), 0.8);
+  --color-primary-500: var(--primary-color);
+  --color-primary-600: color-mix(in srgb, var(--primary-color), transparent 20%);
 }

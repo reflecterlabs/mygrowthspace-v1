@@ -16,11 +16,11 @@ interface UserProfileModalProps {
 }
 
 const COLORS = [
-  { name: 'cyan', rgb: '6, 182, 212' },
-  { name: 'emerald', rgb: '16, 185, 129' },
-  { name: 'violet', rgb: '139, 92, 246' },
-  { name: 'amber', rgb: '245, 158, 11' },
-  { name: 'rose', rgb: '244, 63, 94' },
+  { name: 'Cyan', hex: '#06b6d4' },
+  { name: 'Emerald', hex: '#10b981' },
+  { name: 'Violet', hex: '#8b5cf6' },
+  { name: 'Amber', hex: '#f59e0b' },
+  { name: 'Rose', hex: '#f43f5e' },
 ];
 
 type TabType = 'profile' | 'finance';
@@ -46,12 +46,12 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     }
   }, [isOpen, userProfile.name]);
 
-  const handleUpdateColor = async (colorName: string, rgb: string) => {
+  const handleUpdateColor = async (hex: string) => {
     const toastId = showLoading('Switching visuals...');
     try {
-      document.documentElement.style.setProperty('--primary-rgb', rgb);
-      await onUpdateProfile({ themeColor: colorName });
-      showSuccess(`Visuals updated to ${colorName}`);
+      document.documentElement.style.setProperty('--primary-color', hex);
+      await onUpdateProfile({ themeColor: hex });
+      showSuccess(`Visual system recalibrated.`);
     } catch (e) {
       showError('Failed to update theme');
     } finally { dismissToast(toastId); }
@@ -108,15 +108,15 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <section className="space-y-4">
                 <div className="flex items-center space-x-2 text-slate-500">
                   <Palette size={14} className="text-primary-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Color Preference</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Hex Visual System</span>
                 </div>
-                <div className="flex gap-3 flex-wrap">
+                <div className="flex gap-4 flex-wrap">
                   {COLORS.map(c => (
                     <button 
-                      key={c.name} 
-                      onClick={() => handleUpdateColor(c.name, c.rgb)}
-                      className={`w-10 h-10 rounded-full border-2 transition-all ${userProfile.themeColor === c.name ? 'border-white scale-110' : 'border-transparent'}`}
-                      style={{ backgroundColor: `rgb(${c.rgb})` }}
+                      key={c.hex} 
+                      onClick={() => handleUpdateColor(c.hex)}
+                      className={`w-10 h-10 rounded-full border-2 transition-all ${userProfile.themeColor === c.hex ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-60'}`}
+                      style={{ backgroundColor: c.hex }}
                     />
                   ))}
                 </div>

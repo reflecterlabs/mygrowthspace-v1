@@ -107,19 +107,11 @@ const App: React.FC = () => {
             identityStatement: profileData.identity_statement,
             focusAreas: profileData.focus_areas,
             narrative: profileData.narrative,
-            themeColor: profileData.theme_color
+            themeColor: profileData.theme_color || '#06b6d4'
           });
 
-          // Set theme color CSS variable
-          const themeColor = profileData.theme_color || 'cyan';
-          const rgb = {
-            cyan: '6, 182, 212',
-            emerald: '16, 185, 129',
-            violet: '139, 92, 246',
-            amber: '245, 158, 11',
-            rose: '244, 63, 94'
-          }[themeColor as 'cyan'|'emerald'|'violet'|'amber'|'rose'] || '6, 182, 212';
-          document.documentElement.style.setProperty('--primary-rgb', rgb);
+          // Apply saved hex color
+          document.documentElement.style.setProperty('--primary-color', profileData.theme_color || '#06b6d4');
 
           const { data: habitsData } = await supabase.from('habits').select('*').eq('user_id', user.id);
           setHabits((habitsData || []).map((h: any) => ({ 
@@ -160,7 +152,7 @@ const App: React.FC = () => {
         focus_areas: newProfile.focusAreas,
         narrative: newProfile.narrative,
         has_completed_onboarding: true,
-        theme_color: 'cyan'
+        theme_color: '#06b6d4'
       });
       
       if (pErr) throw pErr;
@@ -341,11 +333,12 @@ const App: React.FC = () => {
                   ))}
                   {filteredHabits.length === 0 && <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">No active protocols in this vector.</div>}
                 </div>
-                <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} />
               </main>
             ) : (
               <main className="animate-in fade-in duration-500"><InsightsPage habits={habits} /></main>
             )}
+
+            <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} />
 
             <BottomNavBar currentView={currentView} onHomeClick={() => setCurrentView('home')} onInsightsClick={() => setCurrentView('insights')} onAddHabitClick={() => setIsModalOpen(true)} />
             
