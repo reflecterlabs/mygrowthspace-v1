@@ -4,7 +4,6 @@ import './src/index.css';
 import ToastProvider from './src/components/ToastProvider';
 import { ClerkProvider } from '@clerk/clerk-react';
 import { ChipiProvider } from '@chipi-stack/chipi-react';
-// Eliminado: import { ChipiClient } from '@chipi-stack/backend'; // Ya no es necesario importar ChipiClient aquí
 
 const container = document.getElementById('root');
 
@@ -26,7 +25,7 @@ if (container) {
   const root = createRoot(container);
   root.render(
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <ChipiProvider apiPublicKey={CHIPI_API_KEY}> {/* Corregido: Pasar apiPublicKey directamente como prop */}
+      <ChipiProvider config={{ apiPublicKey: CHIPI_API_KEY }}> {/* Corregido: Pasar la clave API dentro de un objeto 'config' */}
         <ToastProvider />
         <App />
       </ChipiProvider>
