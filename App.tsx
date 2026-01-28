@@ -307,7 +307,7 @@ const App: React.FC = () => {
 
       <SignedIn>
         {profileStatus === 'onboarding' ? <Onboarding onComplete={handleOnboardingComplete} /> : (
-          <div className="min-h-screen bg-[#0a0a0c] text-white pb-32">
+          <div className="min-h-screen bg-[#0a0a0c] text-white pb-48">
             <nav className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0a0a0c]/80 backdrop-blur-md sticky top-0 z-30">
               <div>
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Protocol Active</p>
@@ -324,9 +324,6 @@ const App: React.FC = () => {
             <main className="p-6 space-y-8 animate-in fade-in duration-500">
               <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
               
-              {/* Sección de entrada Neural (Routine Input) */}
-              <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} />
-
               {/* Sugerencias de la IA */}
               {aiSuggestions.length > 0 && (
                 <div className="space-y-4">
@@ -368,6 +365,9 @@ const App: React.FC = () => {
                 )}
               </div>
             </main>
+
+            {/* Componente de entrada flotante */}
+            <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} />
 
             <BottomNavBar onHomeClick={() => {}} onInsightsClick={() => {}} onAddHabitClick={() => setIsModalOpen(true)} />
             <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />

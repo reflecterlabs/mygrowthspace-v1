@@ -16,32 +16,38 @@ const RoutineInput: React.FC<RoutineInputProps> = ({ onAnalyze, isLoading }) => 
   };
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 mb-8 relative overflow-hidden group">
-      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-      
-      <div className="flex items-center space-x-2 text-cyan-400 mb-4">
-        <Sparkles size={18} />
-        <span className="text-[10px] font-black uppercase tracking-widest">Neural Input</span>
+    <div className="fixed bottom-28 left-6 right-6 z-40 animate-in slide-in-from-bottom-4 duration-500">
+      <div className="bg-[#1a1a1e]/80 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] group relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+        
+        <div className="relative flex items-end space-x-3">
+          <div className="flex-1">
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Describe cambios en tu protocolo..."
+              className="w-full bg-transparent border-none text-sm text-white placeholder:text-slate-600 outline-none resize-none min-h-[45px] max-h-[120px] py-2 px-2 no-scrollbar font-medium"
+              rows={1}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+              }}
+            />
+          </div>
+          <button
+            onClick={handleSubmit}
+            disabled={!text.trim() || isLoading}
+            className="p-3 bg-cyan-500 text-black rounded-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-20 disabled:scale-100 shadow-lg shadow-cyan-500/20 mb-1 flex-shrink-0"
+          >
+            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+          </button>
+        </div>
+        
+        <div className="absolute top-3 left-6 pointer-events-none opacity-20">
+          <Sparkles size={12} className="text-cyan-400" />
+        </div>
       </div>
-      
-      <div className="relative">
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Describe un cambio en tu rutina o nuevos objetivos..."
-          className="w-full bg-black/20 border border-white/5 rounded-3xl p-5 pr-14 text-sm text-white placeholder:text-slate-600 outline-none focus:border-cyan-500/50 transition-all min-h-[100px] resize-none"
-        />
-        <button
-          onClick={handleSubmit}
-          disabled={!text.trim() || isLoading}
-          className="absolute bottom-4 right-4 p-3 bg-cyan-500 text-black rounded-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-20 disabled:scale-100 shadow-lg shadow-cyan-500/20"
-        >
-          {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
-        </button>
-      </div>
-      <p className="text-[9px] text-slate-500 mt-3 font-bold uppercase tracking-tighter ml-2">
-        La IA analizará tu texto para optimizar tus protocolos actuales.
-      </p>
     </div>
   );
 };
