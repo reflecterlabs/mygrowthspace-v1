@@ -114,7 +114,6 @@ const App: React.FC = () => {
             language: profileData.language || 'en'
           });
 
-          // Apply saved hex color
           document.documentElement.style.setProperty('--primary-color', profileData.theme_color || '#06b6d4');
 
           const { data: habitsData } = await supabase.from('habits').select('*').eq('user_id', user.id);
@@ -147,6 +146,7 @@ const App: React.FC = () => {
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
     if (!user) return;
     const toastId = showLoading(t('toastActivatingProtocols'));
+    const todayStr = new Date().toISOString().split('T')[0];
     try {
       const { error: pErr } = await supabase.from('user_profiles').upsert({
         id: user.id, 
@@ -170,7 +170,8 @@ const App: React.FC = () => {
           frequency: h.frequency,
           days_of_week: h.daysOfWeek,
           time_of_day: h.time,
-          is_one_time: h.isOneTime
+          is_one_time: h.isOneTime,
+          start_date: todayStr
         }));
         const { error: hErr } = await supabase.from('habits').insert(habitsToInsert);
         if (hErr) throw hErr;
@@ -212,6 +213,7 @@ const App: React.FC = () => {
 
   const saveHabit = async (data: Partial<Habit>) => {
     if (!user) return;
+    const todayStr = new Date().toISOString().split('T')[0];
     const { data: newH } = await supabase.from('habits').insert({
       user_id: user.id,
       name: data.name,
@@ -220,7 +222,8 @@ const App: React.FC = () => {
       days_of_week: data.daysOfWeek || [0,1,2,3,4,5,6],
       time_of_day: data.time,
       is_one_time: data.isOneTime || false,
-      specific_dates: data.specificDates || []
+      specific_dates: data.specificDates || [],
+      start_date: todayStr
     }).select().single();
 
     if (newH) {
@@ -235,7 +238,8 @@ const App: React.FC = () => {
         completedDates: [],
         createdAt: newH.created_at,
         isOneTime: newH.is_one_time,
-        specificDates: newH.specific_dates
+        specificDates: newH.specific_dates,
+        startDate: newH.start_date
       }]);
       showSuccess(t('toastHabitDeployed'));
       setIsModalOpen(false);
@@ -289,7 +293,11 @@ const App: React.FC = () => {
     setProfile(prev => prev ? { ...prev, ...updates } : null);
   };
 
-  const filteredHabits = habits.filter(h => selectedCategory === 'All' || h.category === selectedCategory);
+  const filteredHabits = habits.filter(h => {
+    const isCorrectCategory = selectedCategory === 'All' || h.category === selectedCategory;
+    const isStarted = h.startDate ? selectedDate >= h.startDate : true;
+    return isCorrectCategory && isStarted;
+  });
 
   if (!isLoaded || profileStatus === 'loading') return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="animate-spin text-primary-500" /></div>;
 
@@ -338,7 +346,7 @@ const App: React.FC = () => {
                       language={profile?.language}
                     />
                   ))}
-                  {filteredHabits.length === 0 && <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">No active protocols.</div>}
+                  {filteredHabits.length === 0 && <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">No active protocols for this date.</div>}
                 </div>
               </main>
             ) : (
