@@ -1,6 +1,6 @@
 import React from 'react';
 import { Habit } from '../types';
-import { CheckCircle, Circle, Flame, Trash2 } from 'lucide-react';
+import { CheckCircle, Circle, Flame, Trash2, Heart, Brain, Zap, DollarSign, Users } from 'lucide-react';
 import { getTranslation } from '../src/lib/translations';
 
 interface HabitCardProps {
@@ -26,6 +26,17 @@ const HabitCard: React.FC<HabitCardProps> = ({
 }) => {
   const isCompletedOnDate = habit.completedDates.includes(selectedDateStr);
   const t = (key: any) => getTranslation(language, key);
+
+  const getCategoryIcon = () => {
+    switch (habit.category) {
+      case 'Health': return <Heart size={14} />;
+      case 'Mindset': return <Brain size={14} />;
+      case 'Productivity': return <Zap size={14} />;
+      case 'Finance': return <DollarSign size={14} />;
+      case 'Social': return <Users size={14} />;
+      default: return <Flame size={14} />;
+    }
+  };
 
   const handleClick = () => {
     if (isSelectionMode && onToggleSelection) {
@@ -69,7 +80,10 @@ const HabitCard: React.FC<HabitCardProps> = ({
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-black mt-1">
             <span className="flex items-center text-orange-500 uppercase tracking-widest"><Flame size={12} className="mr-1" /> {habit.streak} {t('habitStreak')}</span>
             <span className="uppercase px-2 py-0.5 bg-white/5 rounded text-slate-500 border border-white/5">{habit.time || t('habitProtocolActive')}</span>
-            <span className="bg-primary-500/20 text-primary-500 px-2 py-0.5 rounded uppercase">{t(habit.category.toLowerCase() as any)}</span>
+            <span className="bg-primary-500/20 text-primary-500 px-2 py-0.5 rounded uppercase flex items-center gap-1">
+              {getCategoryIcon()}
+              {t(habit.category.toLowerCase() as any)}
+            </span>
           </div>
         </div>
       </div>
