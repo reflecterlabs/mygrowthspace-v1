@@ -69,9 +69,13 @@ const App: React.FC = () => {
       setProfileStatus('loading');
       try {
         const token = await getToken({ template: 'supabase' });
-        if (!token) throw new Error("No token");
+        if (!token) throw new Error("No token from Clerk");
 
-        await supabase.auth.setSession({ access_token: token, refresh_token: token });
+        // Llamamos a setSession sin asignar el error a una variable no utilizada
+        await supabase.auth.setSession({ 
+          access_token: token, 
+          refresh_token: token 
+        });
         
         const { data: profileData, error: pError } = await supabase
           .from('user_profiles')
@@ -79,7 +83,11 @@ const App: React.FC = () => {
           .eq('id', user.id)
           .maybeSingle();
 
-        if (pError) throw pError;
+        if (pError && pError.code !== 'PGRST116') {
+          console.error("Profile fetch error:", pError);
+          setProfileStatus('error');
+          return;
+        }
 
         if (!profileData || !profileData.has_completed_onboarding) {
           setProfileStatus('onboarding');
@@ -123,25 +131,25 @@ const App: React.FC = () => {
     if (!user) return;
     const toastId = showLoading('Activating protocols...');
     try {
-      // Sincronizar sesión antes de la operación para evitar 401
       const token = await getToken({ template: 'supabase' });
       if (token) {
         await supabase.auth.setSession({ access_token: token, refresh_token: token });
       }
 
       const { error: pErr } = await supabase.from('user_profiles').upsert({
-        id: user.id,
+        id: user.id, 
         name: newProfile.name,
         email: user.emailAddresses[0].emailAddress,
         identity_statement: newProfile.identityStatement,
         focus_areas: newProfile.focusAreas,
         narrative: newProfile.narrative,
         has_completed_onboarding: true
-      });
+      }, { onConflict: 'id' });
+      
       if (pErr) throw pErr;
 
       if (newHabits.length > 0) {
-        await supabase.from('habits').insert(newHabits.map(h => ({
+        const habitsToInsert = newHabits.map(h => ({
           user_id: user.id,
           name: h.name,
           category: h.category,
@@ -149,17 +157,20 @@ const App: React.FC = () => {
           days_of_week: h.daysOfWeek,
           time_of_day: h.time,
           is_one_time: h.isOneTime
-        })));
+        }));
+        
+        const { error: hErr } = await supabase.from('habits').insert(habitsToInsert);
+        if (hErr) throw hErr;
       }
+      
       showSuccess('Onboarding complete!');
       setRefreshTrigger(t => t + 1);
-    } catch (e) {
-      showError('Sync failed');
-      console.error(e);
+    } catch (e: any) {
+      showError(e.message || 'Sync failed');
+      console.error("Onboarding error:", e);
     } finally { dismissToast(toastId); }
   };
 
-  // ... (resto del componente sin cambios)
   const toggleHabit = async (habitId: string, date: string) => {
     const habit = habits.find(h => h.id === habitId);
     if (!habit || !user) return;
@@ -255,10 +266,16 @@ const App: React.FC = () => {
   return (
     <>
       <SignedOut>
-        <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-8">
-          <h1 className="text-4xl font-black text-white mb-8">Growth Space</h1>
+        <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-20 h-20 bg-cyan-500/10 rounded-3xl flex items-center justify-center text-cyan-400 mb-8 border border-cyan-500/20">
+            <UserIcon size={40} />
+          </div>
+          <h1 className="text-4xl font-black text-white mb-4 tracking-tighter">My Growth Space</h1>
+          <p className="text-slate-500 max-w-xs mb-8 font-medium">Initialize your identity-based habit protocols.</p>
           <SignInButton mode="modal">
-            <button className="bg-cyan-500 text-black px-8 py-4 rounded-2xl font-black">Get Started</button>
+            <button className="bg-white text-black px-12 py-5 rounded-[2rem] font-black text-lg hover:scale-105 transition-all active:scale-95 shadow-2xl">
+              Establish Link
+            </button>
           </SignInButton>
         </div>
       </SignedOut>
@@ -266,18 +283,29 @@ const App: React.FC = () => {
       <SignedIn>
         {profileStatus === 'onboarding' ? <Onboarding onComplete={handleOnboardingComplete} /> : (
           <div className="min-h-screen bg-[#0a0a0c] text-white pb-32">
-            <nav className="p-6 border-b border-white/5 flex justify-between items-center">
+            <nav className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0a0a0c]/80 backdrop-blur-md sticky top-0 z-30">
               <div>
-                <p className="text-[10px] font-black text-slate-500 uppercase">System Operator</p>
-                <h2 className="text-2xl font-black">{profile?.name}</h2>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Protocol Active</p>
+                <h2 className="text-2xl font-black tracking-tight">{profile?.name}</h2>
               </div>
-              <button onClick={() => setIsProfileModalOpen(true)} className="p-2 border border-white/10 rounded-xl"><UserIcon size={20}/></button>
+              <button 
+                onClick={() => setIsProfileModalOpen(true)} 
+                className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all"
+              >
+                <UserIcon size={20} className="text-cyan-400" />
+              </button>
             </nav>
 
-            <main className="p-6 space-y-8">
+            <main className="p-6 space-y-8 animate-in fade-in duration-500">
               <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
               
               <div className="grid gap-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Current Nodes</h3>
+                  <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded-lg border border-cyan-500/20 font-bold uppercase">
+                    {habits.length} Active
+                  </span>
+                </div>
                 {habits.map(h => (
                   <HabitCard 
                     key={h.id} 
@@ -289,13 +317,18 @@ const App: React.FC = () => {
                   />
                 ))}
                 {habits.length === 0 && (
-                  <div className="text-center p-12 border border-dashed border-white/10 rounded-[2.5rem] text-slate-500 font-bold">
-                    No active protocols for this sector.
+                  <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600">
+                    <div className="flex justify-center mb-4 opacity-20"><UserIcon size={48} /></div>
+                    <p className="font-bold text-sm">No operational protocols found.</p>
+                    <p className="text-[10px] uppercase tracking-widest mt-2">Initialize a new node to begin.</p>
                   </div>
                 )}
               </div>
 
-              <div className="mt-12 space-y-6">
+              <div className="mt-12 space-y-8 border-t border-white/5 pt-12">
+                <div className="flex items-center space-x-2 text-slate-500 mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest">Financial Synchronization</span>
+                </div>
                 <CreateWallet />
                 <Transfer />
               </div>
