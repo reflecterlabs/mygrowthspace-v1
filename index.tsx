@@ -23,7 +23,7 @@ if (container) {
   const root = createRoot(container);
   root.render(
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <ChipiProvider apiKey={CHIPI_API_KEY}> {/* Corregido: apiKey como prop directa */}
+      <ChipiProvider config={{ apiKey: CHIPI_API_KEY }}> {/* Corregido: Añadida la prop config */}
         <ToastProvider />
         <App />
       </ChipiProvider>
