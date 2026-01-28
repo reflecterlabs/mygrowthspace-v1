@@ -10,6 +10,7 @@ import BottomNavBar from './components/BottomNavBar';
 import UserProfileModal from './src/components/UserProfileModal';
 import RoutineInput from './src/components/RoutineInput';
 import InsightCard from './components/InsightCard';
+import InsightsPage from './src/pages/InsightsPage';
 import { createClerkSupabaseClient } from './src/lib/supabaseClient';
 import { Habit, UserProfile, SuggestedCard } from './types';
 import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
@@ -56,6 +57,7 @@ const App: React.FC = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<SuggestedCard[]>([]);
+  const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
 
   const supabase = useMemo(() => createClerkSupabaseClient(getToken), [getToken]);
 
@@ -121,6 +123,7 @@ const App: React.FC = () => {
             createdAt: h.created_at,
             startDate: h.start_date,
             isOneTime: h.is_one_time,
+            specificDates: h.specific_dates,
             lastCompletedDate: h.last_completed_date
           })));
           setProfileStatus('ready');
@@ -321,55 +324,65 @@ const App: React.FC = () => {
               </button>
             </nav>
 
-            <main className="p-6 space-y-8 animate-in fade-in duration-500">
-              <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
-              
-              {/* Sugerencias de la IA */}
-              {aiSuggestions.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Neural Suggestions</h3>
-                  {aiSuggestions.map(suggestion => (
-                    <InsightCard 
-                      key={suggestion.id} 
-                      suggestion={suggestion} 
-                      onAccept={(habit) => acceptAiSuggestion(habit, suggestion.id)}
-                      onReject={() => setAiSuggestions(prev => prev.filter(s => s.id !== suggestion.id))}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Current Nodes</h3>
-                  <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded-lg border border-cyan-500/20 font-bold uppercase">
-                    {habits.length} Active
-                  </span>
-                </div>
-                {habits.map(h => (
-                  <HabitCard 
-                    key={h.id} 
-                    habit={h} 
-                    selectedDateStr={selectedDate} 
-                    onToggle={toggleHabit} 
-                    onDelete={deleteHabit} 
-                    onEdit={() => {}} 
-                  />
-                ))}
-                {habits.length === 0 && (
-                  <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600">
-                    <div className="flex justify-center mb-4 opacity-20"><UserIcon size={48} /></div>
-                    <p className="font-bold text-sm">No operational protocols found.</p>
-                    <p className="text-[10px] uppercase tracking-widest mt-2">Initialize a new node to begin.</p>
+            {currentView === 'home' ? (
+              <main className="p-6 space-y-8 animate-in fade-in duration-500">
+                <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
+                
+                {aiSuggestions.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Neural Suggestions</h3>
+                    {aiSuggestions.map(suggestion => (
+                      <InsightCard 
+                        key={suggestion.id} 
+                        suggestion={suggestion} 
+                        onAccept={(habit) => acceptAiSuggestion(habit, suggestion.id)}
+                        onReject={() => setAiSuggestions(prev => prev.filter(s => s.id !== suggestion.id))}
+                      />
+                    ))}
                   </div>
                 )}
-              </div>
-            </main>
 
-            {/* Componente de entrada flotante */}
-            <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} />
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Current Nodes</h3>
+                    <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded-lg border border-cyan-500/20 font-bold uppercase">
+                      {habits.length} Active
+                    </span>
+                  </div>
+                  {habits.map(h => (
+                    <HabitCard 
+                      key={h.id} 
+                      habit={h} 
+                      selectedDateStr={selectedDate} 
+                      onToggle={toggleHabit} 
+                      onDelete={deleteHabit} 
+                      onEdit={() => {}} 
+                    />
+                  ))}
+                  {habits.length === 0 && (
+                    <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600">
+                      <div className="flex justify-center mb-4 opacity-20"><UserIcon size={48} /></div>
+                      <p className="font-bold text-sm">No operational protocols found.</p>
+                      <p className="text-[10px] uppercase tracking-widest mt-2">Initialize a new node to begin.</p>
+                    </div>
+                  )}
+                </div>
+                
+                <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} />
+              </main>
+            ) : (
+              <main className="animate-in fade-in duration-500">
+                <InsightsPage habits={habits} />
+              </main>
+            )}
 
-            <BottomNavBar onHomeClick={() => {}} onInsightsClick={() => {}} onAddHabitClick={() => setIsModalOpen(true)} />
+            <BottomNavBar 
+              currentView={currentView}
+              onHomeClick={() => setCurrentView('home')} 
+              onInsightsClick={() => setCurrentView('insights')} 
+              onAddHabitClick={() => setIsModalOpen(true)} 
+            />
+            
             <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
             
             {profile && (
