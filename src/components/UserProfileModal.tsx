@@ -28,6 +28,8 @@ const COLORS = [
 const LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'es', name: 'Español' },
+  { code: 'pt', name: 'Português' },
+  { code: 'fr', name: 'Français' },
 ];
 
 // type TabType = 'profile' | 'finance';
