@@ -4,6 +4,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useUser, useAuth, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react';
+import { jwtDecode } from 'jwt-decode'; // Importamos para debug
 import Onboarding from './components/Onboarding';
 import HabitCard from './components/HabitCard';
 import AddHabitModal from './components/AddHabitModal';
@@ -69,9 +70,12 @@ const App: React.FC = () => {
       setProfileStatus('loading');
       try {
         const token = await getToken({ template: 'supabase' });
-        if (!token) throw new Error("No token from Clerk");
+        if (!token) throw new Error("No token from Clerk. Have you created the 'supabase' JWT Template?");
 
-        // Llamamos a setSession sin asignar el error a una variable no utilizada
+        // DEBUG: Inspeccionamos el token
+        const decoded = jwtDecode(token);
+        console.log("DEBUG: Clerk JWT Claims:", decoded);
+
         await supabase.auth.setSession({ 
           access_token: token, 
           refresh_token: token 
@@ -127,6 +131,7 @@ const App: React.FC = () => {
     initSession();
   }, [isLoaded, isSignedIn, user, refreshTrigger, getToken]);
 
+  // Resto del código se mantiene igual...
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
     if (!user) return;
     const toastId = showLoading('Activating protocols...');
