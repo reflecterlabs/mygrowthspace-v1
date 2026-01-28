@@ -16,29 +16,29 @@ const InsightCard: React.FC<Props> = ({ suggestion, onAccept, onReject, language
     (suggestion as any).suggestedAction?.payload || (suggestion as any).payload;
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 mb-6 animate-in slide-in-from-top duration-500 backdrop-blur-xl">
-      <div className="flex items-start justify-between mb-4">
+    <div className="bg-white/5 border border-white/10 rounded-[2rem] p-4 sm:p-5 mb-4 animate-in slide-in-from-top duration-500 backdrop-blur-xl">
+      <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2 text-primary-500">
-          <Sparkles size={18} className="drop-shadow-[0_0_8px_var(--primary-color)]" />
-          <span className="text-[10px] font-black uppercase tracking-widest">{t('neuralSuggestion')}</span>
+          <Sparkles size={16} className="drop-shadow-[0_0_8px_var(--primary-color)]" />
+          <span className="text-[9px] font-black uppercase tracking-widest">{t('neuralSuggestion')}</span>
         </div>
-        <button onClick={onReject} className="text-slate-500 hover:text-white transition-colors">
-          <X size={18} />
+        <button onClick={onReject} className="text-slate-500 hover:text-white transition-colors p-1">
+          <X size={16} />
         </button>
       </div>
       
-      <h3 className="text-lg font-black text-white mb-2">{suggestion.title}</h3>
-      <p className="text-sm text-slate-400 mb-6 leading-relaxed font-medium">
+      <h3 className="text-base font-black text-white mb-1.5 leading-tight">{suggestion.title}</h3>
+      <p className="text-xs text-slate-400 mb-4 leading-relaxed font-medium">
         {suggestion.description}
       </p>
 
       <div className="flex gap-3">
         <button
           onClick={() => payload && onAccept(payload)}
-          className="flex-1 bg-primary-500 text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95 disabled:opacity-40"
+          className="flex-1 bg-primary-500 text-black py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95 disabled:opacity-40"
           disabled={!payload}
         >
-          <Plus size={16} strokeWidth={3} />
+          <Plus size={14} strokeWidth={3} />
           {t('syncToRoutine')}
         </button>
       </div>
