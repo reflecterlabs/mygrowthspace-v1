@@ -318,12 +318,12 @@ const App: React.FC = () => {
 
             {currentView === 'home' ? (
               <main className="p-6 space-y-4 animate-in fade-in duration-500">
-                <ManifestHeader statement={profile?.identityStatement || ''} />
+                <ManifestHeader statement={profile?.identityStatement || ''} language={profile?.language} />
                 <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
                 <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} language={profile?.language} />
                 
                 {aiSuggestions.map(s => (
-                  <InsightCard key={s.id} suggestion={s} onAccept={(h) => saveHabit(h)} onReject={() => setAiSuggestions(prev => prev.filter(x => x.id !== s.id))} />
+                  <InsightCard key={s.id} suggestion={s} onAccept={(h) => saveHabit(h)} onReject={() => setAiSuggestions(prev => prev.filter(x => x.id !== s.id))} language={profile?.language} />
                 ))}
 
                 <div className="grid gap-3 pt-4">
@@ -349,8 +349,8 @@ const App: React.FC = () => {
 
             <BottomNavBar currentView={currentView} onHomeClick={() => setCurrentView('home')} onInsightsClick={() => setCurrentView('insights')} onAddHabitClick={() => setIsModalOpen(true)} />
             
-            <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
-            <EditHabitModal isOpen={isEditModalOpen} habit={editingHabit} onClose={() => { setIsEditModalOpen(false); setEditingHabit(null); }} onSave={updateExistingHabit} />
+            <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} language={profile?.language} />
+            <EditHabitModal isOpen={isEditModalOpen} habit={editingHabit} onClose={() => { setIsEditModalOpen(false); setEditingHabit(null); }} onSave={updateExistingHabit} language={profile?.language} />
             
             {deleteConfirmation && (
               <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">

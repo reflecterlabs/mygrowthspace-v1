@@ -170,7 +170,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <section className="space-y-4">
                 <div className="flex items-center space-x-2 text-slate-500">
                   <Palette size={14} className="text-primary-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Select your Colour</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{t('settingsSelectColor')}</span>
                 </div>
                 <div className="flex gap-4 flex-wrap items-center">
                   {COLORS.map(c => (
@@ -221,8 +221,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
           ) : (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-              <CreateWallet />
-              <Transfer />
+              <CreateWallet language={userProfile.language} />
+              <Transfer language={userProfile.language} />
             </div>
           )}
         </div>
@@ -231,7 +231,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
             <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center">
               <AlertCircle size={40} className="text-red-500 mx-auto mb-4" />
-              <h3 className="text-xl font-black text-white mb-4">Confirm Logout</h3>
+              <h3 className="text-xl font-black text-white mb-4">{t('settingsConfirmLogout')}</h3>
               <div className="flex gap-4">
                 <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 py-3 bg-white/5 rounded-2xl text-white font-black">{t('cancel')}</button>
                 <button onClick={onLogout} className="flex-1 py-3 bg-red-500/20 rounded-2xl text-red-400 font-black">{t('confirm')}</button>
@@ -245,7 +245,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center">
               <AlertCircle size={40} className="text-red-500 mx-auto mb-4" />
               <h3 className="text-xl font-black text-white mb-4">{t('deleteHabitTitle')}</h3>
-              <p className="text-slate-400 text-sm mb-8">This action is irreversible.</p>
+              <p className="text-slate-400 text-sm mb-8">{t('settingsIrreversible')}</p>
               <div className="flex gap-4">
                 <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 bg-white/5 rounded-2xl text-white font-black">{t('cancel')}</button>
                 <button onClick={onDeleteAccount} className="flex-1 py-3 bg-red-500/20 rounded-2xl text-red-400 font-black">{t('confirm')}</button>

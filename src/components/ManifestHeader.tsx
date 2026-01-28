@@ -1,16 +1,20 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
+import { getTranslation } from '../lib/translations';
 
 interface ManifestHeaderProps {
   statement: string;
+  language?: string;
 }
 
-const ManifestHeader: React.FC<ManifestHeaderProps> = ({ statement }) => {
+const ManifestHeader: React.FC<ManifestHeaderProps> = ({ statement, language = 'en' }) => {
+  const t = (key: any) => getTranslation(language, key);
+
   return (
     <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-700">
       <div className="flex items-center space-x-2 text-slate-500 mb-2">
         <Sparkles size={14} className="text-primary-500" />
-        <span className="text-[10px] font-black uppercase tracking-widest">Person's Manifest</span>
+        <span className="text-[10px] font-black uppercase tracking-widest">{t('manifestTitle')}</span>
       </div>
       <div className="bg-gradient-to-r from-white/5 to-transparent border-l-2 border-primary-500 p-4 rounded-r-2xl">
         <p className="text-xl font-black text-white italic tracking-tight leading-tight">

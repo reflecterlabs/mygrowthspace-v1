@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { X, Check, Dumbbell, Clock } from 'lucide-react';
 import { Habit } from '../types';
+import { getTranslation } from '../src/lib/translations';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSave: (habit: Partial<Habit>) => void;
+  language?: string;
 }
 
 const CATEGORIES = ['Health', 'Mindset', 'Productivity', 'Finance', 'Social'];
 
-const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
+const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onSave, language = 'en' }) => {
   const [name, setName] = useState('');
   const [category, setCategory] = useState<any>('Mindset');
   const [time, setTime] = useState('08:00');
+  const t = (key: any) => getTranslation(language, key);
 
   if (!isOpen) return null;
 
@@ -29,14 +32,14 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
         <div className="mb-8">
           <div className="flex items-center space-x-2 text-primary-500 mb-2">
             <Dumbbell size={20} />
-            <span className="text-[10px] font-black uppercase tracking-widest">New Node</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">{t('modalNewNode')}</span>
           </div>
-          <h2 className="text-2xl font-black text-white">Initialize Protocol</h2>
+          <h2 className="text-2xl font-black text-white">{t('modalInitialize')}</h2>
         </div>
 
         <div className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Identity Action</label>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">{t('modalAction')}</label>
             <input 
               autoFocus
               className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-primary-500 transition-all font-bold placeholder:text-slate-800"
@@ -47,7 +50,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Vector Category</label>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">{t('modalCategory')}</label>
             <div className="grid grid-cols-3 gap-2">
               {CATEGORIES.map(cat => (
                 <button 
@@ -55,14 +58,14 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
                   onClick={() => setCategory(cat)}
                   className={`py-3 px-1 rounded-xl text-[9px] font-black uppercase transition-all ${category === cat ? 'bg-primary-500 text-black shadow-lg shadow-primary-500/20' : 'bg-white/5 text-slate-500 border border-white/5'}`}
                 >
-                  {cat}
+                  {t(cat.toLowerCase() as any)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Synchronization Time</label>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">{t('modalSyncTime')}</label>
             <div className="flex items-center space-x-3 bg-white/5 border border-white/5 rounded-2xl p-4">
               <Clock size={20} className="text-slate-600" />
               <input 
@@ -80,7 +83,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
             className="w-full bg-white text-black py-5 rounded-3xl font-black text-lg flex items-center justify-center space-x-2 hover:bg-primary-500 transition-all active:scale-95 disabled:opacity-20 mt-4 shadow-xl"
           >
             <Check size={24} />
-            <span>Deploy Protocol</span>
+            <span>{t('modalDeploy')}</span>
           </button>
         </div>
       </div>

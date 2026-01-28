@@ -1,23 +1,26 @@
 import React from 'react';
 import { Sparkles, Plus, X } from 'lucide-react';
 import { Habit, SuggestedCard } from '../types';
+import { getTranslation } from '../src/lib/translations';
 
 interface Props {
   suggestion: SuggestedCard | (SuggestedCard & { payload?: Partial<Habit> });
   onAccept: (habit: Partial<Habit>) => void;
   onReject: () => void;
+  language?: string;
 }
 
-const InsightCard: React.FC<Props> = ({ suggestion, onAccept, onReject }) => {
+const InsightCard: React.FC<Props> = ({ suggestion, onAccept, onReject, language = 'en' }) => {
+  const t = (key: any) => getTranslation(language, key);
   const payload: Partial<Habit> | undefined =
-    // prefer explicit suggestedAction.payload (AI schema), fall back to legacy payload
     (suggestion as any).suggestedAction?.payload || (suggestion as any).payload;
+
   return (
-    <div className="bg-gray-900 border border-white/10 rounded-[2.5rem] p-6 mb-6 animate-in slide-in-from-top duration-500"> {/* Cambiado a bg-gray-900 para un fondo sólido */}
+    <div className="bg-gray-900 border border-white/10 rounded-[2.5rem] p-6 mb-6 animate-in slide-in-from-top duration-500">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-2 text-cyan-400">
           <Sparkles size={18} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Neural Suggestion</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">{t('neuralSuggestion')}</span>
         </div>
         <button onClick={onReject} className="text-slate-500 hover:text-white">
           <X size={18} />
@@ -36,7 +39,7 @@ const InsightCard: React.FC<Props> = ({ suggestion, onAccept, onReject }) => {
           disabled={!payload}
         >
           <Plus size={16} strokeWidth={3} />
-          Sync to Routine
+          {t('syncToRoutine')}
         </button>
       </div>
     </div>
