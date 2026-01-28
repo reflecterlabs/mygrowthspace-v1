@@ -170,6 +170,19 @@ const App: React.FC = () => {
     }).eq('id', habitId).eq('user_id', user.id);
   };
 
+  const deleteHabit = async (habitId: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase.from('habits').delete().eq('id', habitId).eq('user_id', user.id);
+      if (error) throw error;
+      setHabits(prev => prev.filter(h => h.id !== habitId));
+      showSuccess('Protocol terminated');
+    } catch (e) {
+      showError('Failed to delete');
+      console.error(e);
+    }
+  };
+
   const saveHabit = async (data: Partial<Habit>) => {
     if (!user) return;
     const { data: newH } = await supabase.from('habits').insert({
@@ -198,6 +211,36 @@ const App: React.FC = () => {
       showSuccess('Habit added');
       setIsModalOpen(false);
     }
+  };
+
+  const handleUpdateProfile = async (newName: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('user_profiles').update({ name: newName }).eq('id', user.id);
+    if (error) throw error;
+    setProfile(prev => prev ? { ...prev, name: newName } : null);
+  };
+
+  const handleDownloadData = () => {
+    const data = { profile, habits };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `growth-space-data-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showSuccess('Data package ready');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    const token = await getToken();
+    const response = await fetch('https://dtyzunvgbmnheqbubhef.supabase.co/functions/v1/delete-user', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to delete account');
+    await signOut();
   };
 
   if (!isLoaded || profileStatus === 'loading') return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="animate-spin text-cyan-400" /></div>;
@@ -234,10 +277,15 @@ const App: React.FC = () => {
                     habit={h} 
                     selectedDateStr={selectedDate} 
                     onToggle={toggleHabit} 
-                    onDelete={() => {}} 
+                    onDelete={deleteHabit} 
                     onEdit={() => {}} 
                   />
                 ))}
+                {habits.length === 0 && (
+                  <div className="text-center p-12 border border-dashed border-white/10 rounded-[2.5rem] text-slate-500 font-bold">
+                    No active protocols for this sector.
+                  </div>
+                )}
               </div>
 
               <div className="mt-12 space-y-6">
@@ -254,9 +302,9 @@ const App: React.FC = () => {
                 isOpen={isProfileModalOpen} 
                 onClose={() => setIsProfileModalOpen(false)} 
                 userProfile={profile}
-                onUpdateProfile={async (_n) => {}}
-                onDownloadData={() => {}}
-                onDeleteAccount={async () => {}}
+                onUpdateProfile={handleUpdateProfile}
+                onDownloadData={handleDownloadData}
+                onDeleteAccount={handleDeleteAccount}
                 onLogout={async () => signOut()}
               />
             )}
