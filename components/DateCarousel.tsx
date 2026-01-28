@@ -61,12 +61,12 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
     <div className="flex items-center gap-1 sm:gap-2 bg-white/5 rounded-[3rem] p-2 sm:p-3 border border-white/10 w-full shadow-2xl">
       <button
         onClick={handlePrevDay}
-        className="flex-shrink-0 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 hover:text-primary-500 hover:border-primary-500/50 transition-all active:scale-90"
+        className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 hover:text-primary-500 hover:border-primary-500/50 transition-all active:scale-90"
       >
-        <ChevronLeft size={18} />
+        <ChevronLeft size={16} />
       </button>
 
-      <div className="flex gap-1.5 sm:gap-2 flex-1 justify-center overflow-x-auto no-scrollbar px-1">
+      <div className="grid grid-cols-7 gap-1 sm:gap-1.5 flex-1 px-0.5">
         {dates.map((d) => {
           const isSelected = d.date === selectedDate;
           const isToday = d.date === today;
@@ -75,7 +75,7 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
             <button
               key={d.date}
               onClick={() => onDateChange(d.date)}
-              className={`flex-1 max-w-[3.5rem] min-w-[2.5rem] aspect-[4/5] sm:aspect-[3/4] flex flex-col items-center justify-center rounded-2xl border-2 transition-all duration-300 ${
+              className={`flex flex-col items-center justify-center rounded-xl sm:rounded-2xl border-2 transition-all duration-300 py-1.5 sm:py-2 ${
                 isSelected
                   ? 'bg-primary-500/20 border-primary-500 shadow-lg shadow-primary-500/10'
                   : isToday
@@ -83,14 +83,14 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
                   : 'bg-white/5 border-white/5 hover:border-white/20'
               }`}
             >
-              <span className={`text-[7px] sm:text-[8px] font-black uppercase tracking-tighter ${isSelected ? 'text-primary-500' : 'text-slate-500'}`}>
+              <span className={`text-[6px] sm:text-[8px] font-black uppercase tracking-tighter ${isSelected ? 'text-primary-500' : 'text-slate-500'}`}>
                 {d.dayName}
               </span>
-              <span className={`text-[12px] sm:text-[14px] font-black leading-none mt-1 ${isSelected ? 'text-primary-500' : 'text-white'}`}>
+              <span className={`text-[11px] sm:text-[14px] font-black leading-none mt-0.5 sm:mt-1 ${isSelected ? 'text-primary-500' : 'text-white'}`}>
                 {d.label}
               </span>
               {isToday && (
-                <span className="text-[5px] sm:text-[6px] font-black text-orange-500 mt-0.5">HOY</span>
+                <span className="text-[4px] sm:text-[5px] font-black text-orange-500 mt-0.5">HOY</span>
               )}
             </button>
           );
@@ -99,9 +99,9 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
 
       <button
         onClick={handleNextDay}
-        className="flex-shrink-0 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 hover:text-primary-500 hover:border-primary-500/50 transition-all active:scale-90"
+        className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 hover:text-primary-500 hover:border-primary-500/50 transition-all active:scale-90"
       >
-        <ChevronRight size={18} />
+        <ChevronRight size={16} />
       </button>
     </div>
   );
