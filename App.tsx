@@ -304,7 +304,7 @@ const App: React.FC = () => {
           <div className="min-h-screen bg-[#0a0a0c] text-white pb-48">
             <nav className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0a0a0c]/80 backdrop-blur-md sticky top-0 z-30">
               <div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Operator Linked</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">My Growth Space</p>
                 <h2 className="text-2xl font-black tracking-tight">{profile?.name}</h2>
               </div>
               <button onClick={() => setIsProfileModalOpen(true)} className="p-3 bg-white/5 border border-white/10 rounded-2xl"><UserIcon size={20} className="text-primary-500" /></button>
@@ -347,7 +347,7 @@ const App: React.FC = () => {
             
             {deleteConfirmation && (
               <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+                <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-sm w-full text-center shadow-2xl">
                   <AlertCircle size={40} className="text-red-500 mx-auto mb-4" />
                   <h3 className="text-xl font-black text-white mb-2">Terminate Protocol?</h3>
                   <p className="text-slate-400 text-xs mb-8">This will delete the habit and all its recurring instances from your schedule.</p>
