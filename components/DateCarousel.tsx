@@ -75,7 +75,7 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
             <button
               key={d.date}
               onClick={() => onDateChange(d.date)}
-              className={`flex flex-col items-center justify-center rounded-xl sm:rounded-2xl border-2 transition-all duration-300 py-1.5 sm:py-2 ${
+              className={`relative flex flex-col items-center justify-center rounded-xl sm:rounded-2xl border-2 transition-all duration-300 py-3 sm:py-4 ${
                 isSelected
                   ? 'bg-primary-500/20 border-primary-500 shadow-lg shadow-primary-500/10'
                   : isToday
@@ -83,15 +83,18 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
                   : 'bg-white/5 border-white/5 hover:border-white/20'
               }`}
             >
+              {isToday && (
+                <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-orange-600 text-white px-2 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black shadow-[0_2px_4px_rgba(0,0,0,0.3)] border border-orange-400 z-10 whitespace-nowrap">
+                  HOY
+                </span>
+              )}
+              
               <span className={`text-[6px] sm:text-[8px] font-black uppercase tracking-tighter ${isSelected ? 'text-primary-500' : 'text-slate-500'}`}>
                 {d.dayName}
               </span>
-              <span className={`text-[11px] sm:text-[14px] font-black leading-none mt-0.5 sm:mt-1 ${isSelected ? 'text-primary-500' : 'text-white'}`}>
+              <span className={`text-[12px] sm:text-[16px] font-black leading-none mt-0.5 sm:mt-1 ${isSelected ? 'text-primary-500' : 'text-white'}`}>
                 {d.label}
               </span>
-              {isToday && (
-                <span className="text-[4px] sm:text-[5px] font-black text-orange-500 mt-0.5">HOY</span>
-              )}
             </button>
           );
         })}
