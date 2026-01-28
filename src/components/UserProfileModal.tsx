@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, User, Download, Trash2, LogOut, AlertCircle, Check, Settings, Palette } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, User, Download, Trash2, LogOut, AlertCircle, Check, Settings, Palette, Plus } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { showSuccess, showError, showLoading, dismissToast } from '../utils/toast';
 import CreateWallet from '../../components/CreateWallet';
@@ -38,6 +38,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [editingName, setEditingName] = useState(userProfile.name);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const colorInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -68,6 +69,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  const isPresetColor = COLORS.some(c => c.hex.toLowerCase() === userProfile.themeColor?.toLowerCase());
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
@@ -108,9 +111,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <section className="space-y-4">
                 <div className="flex items-center space-x-2 text-slate-500">
                   <Palette size={14} className="text-primary-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Hex Visual System</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Select your Colour</span>
                 </div>
-                <div className="flex gap-4 flex-wrap">
+                <div className="flex gap-4 flex-wrap items-center">
                   {COLORS.map(c => (
                     <button 
                       key={c.hex} 
@@ -119,6 +122,24 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       style={{ backgroundColor: c.hex }}
                     />
                   ))}
+                  
+                  {/* Selector de color personalizado */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => colorInputRef.current?.click()}
+                      className={`w-10 h-10 rounded-full border-2 border-dashed flex items-center justify-center transition-all ${!isPresetColor ? 'border-white scale-110 shadow-lg' : 'border-white/20 opacity-60 hover:opacity-100'}`}
+                      style={{ backgroundColor: !isPresetColor ? userProfile.themeColor : 'transparent' }}
+                    >
+                      <Plus size={18} className={!isPresetColor ? 'text-white' : 'text-slate-500'} />
+                    </button>
+                    <input 
+                      ref={colorInputRef}
+                      type="color"
+                      className="absolute inset-0 opacity-0 pointer-events-none"
+                      value={userProfile.themeColor || '#06b6d4'}
+                      onChange={(e) => handleUpdateColor(e.target.value)}
+                    />
+                  </div>
                 </div>
               </section>
 
