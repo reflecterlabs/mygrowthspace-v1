@@ -27,7 +27,7 @@ if (container) {
   const root = createRoot(container);
   root.render(
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <ChipiProvider client={chipiClient}> {/* Corregido: Pasar la instancia del cliente */}
+      <ChipiProvider config={{ client: chipiClient }}> {/* Corregido: Pasar la instancia del cliente dentro de 'config' */}
         <ToastProvider />
         <App />
       </ChipiProvider>
