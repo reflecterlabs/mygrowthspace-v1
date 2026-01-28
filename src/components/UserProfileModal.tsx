@@ -1,9 +1,11 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, User, Download, Trash2, LogOut, AlertCircle, Check, Settings, Palette, Plus, Save, Globe } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { showSuccess, showError, showLoading, dismissToast } from '../utils/toast';
-import CreateWallet from '../../components/CreateWallet';
-import Transfer from '../../components/Transfer';
+// import CreateWallet from '../../components/CreateWallet';
+// import Transfer from '../../components/Transfer';
 import { getTranslation } from '../lib/translations';
 
 interface UserProfileModalProps {
@@ -120,6 +122,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <h2 className="text-2xl font-black text-white">{t('settingsTitle')}</h2>
         </div>
 
+        {/* Tab Switcher hidden for now */}
+        {/* 
         <div className="flex bg-white/5 p-1 rounded-2xl mb-8 border border-white/5">
           <button 
             onClick={() => setActiveTab('profile')} 
@@ -134,6 +138,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             {t('settingsFinance')}
           </button>
         </div>
+        */}
 
         <div className="flex-1 overflow-y-auto no-scrollbar space-y-8 pb-4">
           {activeTab === 'profile' ? (
@@ -220,9 +225,13 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
               </section>
             </div>
           ) : (
+            /* Finance section hidden but logic preserved */
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-              <CreateWallet language={userProfile.language} />
-              <Transfer language={userProfile.language} />
+              {/* <CreateWallet language={userProfile.language} /> */}
+              {/* <Transfer language={userProfile.language} /> */}
+              <div className="text-center p-8 text-slate-500 font-black uppercase tracking-widest text-xs">
+                Finances Module Offline
+              </div>
             </div>
           )}
         </div>
