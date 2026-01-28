@@ -1,17 +1,17 @@
 import React from 'react';
-import { LayoutGrid, BarChart2, Plus } from 'lucide-react'; // Iconos actualizados
+import { LayoutGrid, BarChart2, Plus } from 'lucide-react';
 
 interface BottomNavBarProps {
   onHomeClick?: () => void;
   onInsightsClick?: () => void;
-  onAddHabitClick?: () => void; // Nueva prop para el botón de añadir hábito
+  onAddHabitClick?: () => void;
   currentView?: 'home' | 'insights';
 }
 
 const BottomNavBar: React.FC<BottomNavBarProps> = ({
   onHomeClick,
   onInsightsClick,
-  onAddHabitClick, // Recibir la nueva prop
+  onAddHabitClick,
   currentView = 'home'
 }) => {
   const navItems = [
@@ -32,23 +32,22 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({
               onClick={item.onClick}
               className={`flex flex-col items-center justify-center py-3 px-2 transition-all rounded-lg ${
                 isActive
-                  ? 'text-cyan-400'
-                  : 'text-slate-400 hover:text-cyan-400'
+                  ? 'text-primary-500'
+                  : 'text-slate-400 hover:text-primary-500'
               }`}
             >
               <Icon
                 size={20}
                 strokeWidth={2}
-                className={'group-hover:drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]'}
+                className={isActive ? 'drop-shadow-[0_0_8px_var(--primary-color)]' : ''}
               />
             </button>
           );
         })}
         
-        {/* Botón central de Añadir Hábito */}
         <button
           onClick={onAddHabitClick}
-          className="absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-all active:scale-95 drop-shadow-[0_0_20px_rgba(6,182,212,0.5)] z-50"
+          className="absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-primary-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-all active:scale-95 shadow-primary-500/40 z-50"
         >
           <Plus size={32} strokeWidth={3} />
         </button>

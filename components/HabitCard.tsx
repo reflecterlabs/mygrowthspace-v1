@@ -6,7 +6,6 @@ interface HabitCardProps {
   habit: Habit;
   selectedDateStr: string;
   isSelectionMode?: boolean;
-  isSelected?: boolean; // Esta prop no se utiliza en el componente
   onToggleSelection?: (id: string) => void;
   onToggle: (id: string, date: string) => void;
   onDelete: (id: string) => void;
@@ -37,7 +36,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
       onClick={handleClick}
       className={`rounded-[2.5rem] p-6 border mb-3 transition-all flex items-center justify-between group relative overflow-hidden active:scale-[0.98] ${
         isCompletedOnDate 
-          ? 'bg-cyan-500/10 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.1)]' 
+          ? 'bg-primary-500/10 border-primary-500/40 shadow-lg shadow-primary-500/5' 
           : 'bg-white/5 border-white/10 hover:border-white/20'
       } cursor-pointer`}
     >
@@ -49,8 +48,8 @@ const HabitCard: React.FC<HabitCardProps> = ({
           }}
           className={`transition-all duration-300 flex-shrink-0 z-10 p-1 rounded-full ${
             isCompletedOnDate 
-              ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]' 
-              : 'text-slate-700 hover:text-cyan-400'
+              ? 'text-primary-500 scale-110 drop-shadow-[0_0_8px_var(--primary-color)]' 
+              : 'text-slate-700 hover:text-primary-500'
           }`}
         >
           {isCompletedOnDate 
@@ -66,7 +65,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-black mt-1">
             <span className="flex items-center text-orange-500 uppercase tracking-widest"><Flame size={12} className="mr-1" /> {habit.streak} STREAK</span>
             <span className="uppercase px-2 py-0.5 bg-white/5 rounded text-slate-500 border border-white/5">{habit.time || 'PROTOCOL ACTIVE'}</span>
-            <span className="bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded uppercase">{habit.category}</span>
+            <span className="bg-primary-500/20 text-primary-500 px-2 py-0.5 rounded uppercase">{habit.category}</span>
           </div>
         </div>
       </div>
