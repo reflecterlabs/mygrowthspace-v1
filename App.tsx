@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { User as UserIcon, Loader2, AlertCircle } from 'lucide-react';
 import { useUser, useAuth, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react';
+import { dark } from '@clerk/themes';
 import Onboarding from './components/Onboarding';
 import HabitCard from './components/HabitCard';
 import AddHabitModal from './components/AddHabitModal';
@@ -185,6 +186,12 @@ const App: React.FC = () => {
   };
 
   const toggleHabit = async (habitId: string, date: string) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (date < todayStr) {
+      showError("Consistency is maintained in the present. Past logs are locked.");
+      return;
+    }
+
     const habit = habits.find(h => h.id === habitId);
     if (!habit || !user) return;
     const isDone = habit.completedDates.includes(date);
@@ -211,7 +218,7 @@ const App: React.FC = () => {
     }
   };
 
-  const saveHabit = async (data: Partial<Habit>) => {
+  const saveHabit = async (data: Partial<Habit>, suggestionId?: string) => {
     if (!user) return;
     const todayStr = new Date().toISOString().split('T')[0];
     const { data: newH } = await supabase.from('habits').insert({
@@ -243,6 +250,11 @@ const App: React.FC = () => {
       }]);
       showSuccess(t('toastHabitDeployed'));
       setIsModalOpen(false);
+      
+      // Clear suggestion if synced from one
+      if (suggestionId) {
+        setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+      }
     }
   };
 
@@ -263,6 +275,16 @@ const App: React.FC = () => {
       setEditingHabit(null);
     } catch (e) {
       showError('Update failed');
+    }
+  };
+
+  const handleUpdateIdentity = async (newStatement: string) => {
+    if (!user) return;
+    try {
+      await handleUpdateProfile({ identityStatement: newStatement });
+      showSuccess("Identity manifestation updated.");
+    } catch (e) {
+      showError("Failed to update identity.");
     }
   };
 
@@ -287,6 +309,7 @@ const App: React.FC = () => {
     if (updates.name) dbUpdates.name = updates.name;
     if (updates.themeColor) dbUpdates.theme_color = updates.themeColor;
     if (updates.language) dbUpdates.language = updates.language;
+    if (updates.identityStatement) dbUpdates.identity_statement = updates.identityStatement;
     
     const { error } = await supabase.from('user_profiles').update(dbUpdates).eq('id', user.id);
     if (error) throw error;
@@ -301,14 +324,32 @@ const App: React.FC = () => {
 
   if (!isLoaded || profileStatus === 'loading') return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="animate-spin text-primary-500" /></div>;
 
+  const clerkAppearance = {
+    baseTheme: dark,
+    elements: {
+      formButtonPrimary: 'bg-primary-500 text-black hover:opacity-90 transition-all font-black uppercase text-xs tracking-widest py-3',
+      card: 'bg-[#0a0a0c] border border-white/10 rounded-[2.5rem] shadow-2xl',
+      headerTitle: 'text-white font-black tracking-tighter text-2xl',
+      headerSubtitle: 'text-slate-500 font-bold uppercase tracking-widest text-[10px]',
+      socialButtonsBlockButton: 'bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors',
+      formFieldLabel: 'text-[10px] font-black text-slate-500 uppercase tracking-widest',
+      formFieldInput: 'bg-white/5 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-primary-500 transition-all',
+      footerActionText: 'text-slate-500 font-bold',
+      footerActionLink: 'text-primary-500 font-black hover:text-primary-400',
+    }
+  };
+
   return (
     <>
       <SignedOut>
         <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-20 h-20 bg-primary-500/10 rounded-3xl flex items-center justify-center text-primary-500 mb-8 border border-primary-500/20"><UserIcon size={40} /></div>
-          <h1 className="text-4xl font-black text-white mb-4 tracking-tighter">{t('appName')}</h1>
-          <SignInButton mode="modal">
-            <button className="bg-white text-black px-12 py-5 rounded-[2rem] font-black text-lg shadow-2xl">{t('establishLink')}</button>
+          <div className="w-20 h-20 bg-primary-500/10 rounded-[2.5rem] flex items-center justify-center text-primary-500 mb-8 border border-primary-500/20 shadow-2xl shadow-primary-500/10">
+            <div className="w-12 h-12 border-4 border-primary-500 rounded-2xl animate-[spin_3s_linear_infinite]" style={{ borderTopColor: 'transparent' }} />
+          </div>
+          <h1 className="text-4xl font-black text-white mb-4 tracking-tighter uppercase">{t('appName')}</h1>
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-12">{t('syncIdentity')}</p>
+          <SignInButton mode="modal" appearance={clerkAppearance}>
+            <button className="bg-white text-black px-12 py-5 rounded-[2rem] font-black text-lg shadow-2xl hover:scale-105 transition-transform active:scale-95">{t('establishLink')}</button>
           </SignInButton>
         </div>
       </SignedOut>
@@ -321,17 +362,17 @@ const App: React.FC = () => {
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('appName')}</p>
                 <h2 className="text-2xl font-black tracking-tight">{profile?.name}</h2>
               </div>
-              <button onClick={() => setIsProfileModalOpen(true)} className="p-3 bg-white/5 border border-white/10 rounded-2xl"><UserIcon size={20} className="text-primary-500" /></button>
+              <button onClick={() => setIsProfileModalOpen(true)} className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors"><UserIcon size={20} className="text-primary-500" /></button>
             </nav>
 
             {currentView === 'home' ? (
               <main className="p-6 space-y-4 animate-in fade-in duration-500">
-                <ManifestHeader statement={profile?.identityStatement || ''} language={profile?.language} />
+                <ManifestHeader statement={profile?.identityStatement || ''} onUpdate={handleUpdateIdentity} language={profile?.language} />
                 <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
                 <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} language={profile?.language} />
                 
                 {aiSuggestions.map(s => (
-                  <InsightCard key={s.id} suggestion={s} onAccept={(h) => saveHabit(h)} onReject={() => setAiSuggestions(prev => prev.filter(x => x.id !== s.id))} language={profile?.language} />
+                  <InsightCard key={s.id} suggestion={s} onAccept={(h) => saveHabit(h, s.id)} onReject={() => setAiSuggestions(prev => prev.filter(x => x.id !== s.id))} language={profile?.language} />
                 ))}
 
                 <div className="grid gap-3 pt-4">

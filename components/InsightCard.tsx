@@ -16,26 +16,26 @@ const InsightCard: React.FC<Props> = ({ suggestion, onAccept, onReject, language
     (suggestion as any).suggestedAction?.payload || (suggestion as any).payload;
 
   return (
-    <div className="bg-gray-900 border border-white/10 rounded-[2.5rem] p-6 mb-6 animate-in slide-in-from-top duration-500">
+    <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-6 mb-6 animate-in slide-in-from-top duration-500 backdrop-blur-xl">
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-2 text-cyan-400">
-          <Sparkles size={18} />
+        <div className="flex items-center gap-2 text-primary-500">
+          <Sparkles size={18} className="drop-shadow-[0_0_8px_var(--primary-color)]" />
           <span className="text-[10px] font-black uppercase tracking-widest">{t('neuralSuggestion')}</span>
         </div>
-        <button onClick={onReject} className="text-slate-500 hover:text-white">
+        <button onClick={onReject} className="text-slate-500 hover:text-white transition-colors">
           <X size={18} />
         </button>
       </div>
       
       <h3 className="text-lg font-black text-white mb-2">{suggestion.title}</h3>
-      <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+      <p className="text-sm text-slate-400 mb-6 leading-relaxed font-medium">
         {suggestion.description}
       </p>
 
       <div className="flex gap-3">
         <button
           onClick={() => payload && onAccept(payload)}
-          className="flex-1 bg-cyan-500 text-black py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-40"
+          className="flex-1 bg-primary-500 text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95 disabled:opacity-40"
           disabled={!payload}
         >
           <Plus size={16} strokeWidth={3} />
