@@ -13,7 +13,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory, onSel
   const t = (key: any) => getTranslation(language, key);
 
   return (
-    <div className="flex items-center justify-center space-x-2 overflow-x-auto no-scrollbar pb-2 mb-4">
+    <div className="flex items-center justify-start sm:justify-center space-x-2 overflow-x-auto no-scrollbar pb-2 mb-4 px-2">
       {CATEGORIES.map(cat => (
         <button
           key={cat}
