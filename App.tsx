@@ -11,8 +11,6 @@ import UserProfileModal from './src/components/UserProfileModal';
 import { createClerkSupabaseClient } from './src/lib/supabaseClient';
 import { Habit, UserProfile } from './types';
 import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
-import CreateWallet from './components/CreateWallet';
-import Transfer from './components/Transfer';
 
 const calculateStreak = (_habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
   const sortedDates = [...allCompletedDates].sort();
@@ -114,7 +112,7 @@ const App: React.FC = () => {
             daysOfWeek: h.days_of_week,
             time: h.time_of_day,
             streak: h.streak,
-            completedDates: h.completed_dates, // Corregido: mapeado correctamente a completedDates
+            completedDates: h.completed_dates,
             createdAt: h.created_at,
             startDate: h.start_date,
             isOneTime: h.is_one_time,
@@ -318,14 +316,6 @@ const App: React.FC = () => {
                     <p className="text-[10px] uppercase tracking-widest mt-2">Initialize a new node to begin.</p>
                   </div>
                 )}
-              </div>
-
-              <div className="mt-12 space-y-8 border-t border-white/5 pt-12">
-                <div className="flex items-center space-x-2 text-slate-500 mb-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest">Financial Synchronization</span>
-                </div>
-                <CreateWallet />
-                <Transfer />
               </div>
             </main>
 
