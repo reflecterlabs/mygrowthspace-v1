@@ -8,7 +8,7 @@ import AddHabitModal from './components/AddHabitModal';
 import DateCarousel from './components/DateCarousel';
 import BottomNavBar from './components/BottomNavBar';
 import UserProfileModal from './src/components/UserProfileModal';
-import { createClerkSupabaseClient } from './src/lib/supabaseClient'; // Corregido: usando ruta relativa
+import { createClerkSupabaseClient } from './src/lib/supabaseClient';
 import { Habit, UserProfile } from './types';
 import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
 import CreateWallet from './components/CreateWallet';
@@ -87,7 +87,7 @@ const App: React.FC = () => {
           .eq('id', user.id)
           .maybeSingle();
 
-        if (pError && pError.code !== 'PGRST116') {
+        if (pError) {
           console.error("Profile fetch error:", pError);
           setProfileStatus('error');
           return;
@@ -114,7 +114,7 @@ const App: React.FC = () => {
             daysOfWeek: h.days_of_week,
             time: h.time_of_day,
             streak: h.streak,
-            completedDates: h.completed_dates,
+            completedDates: h.completed_dates, // Corregido: mapeado correctamente a completedDates
             createdAt: h.created_at,
             startDate: h.start_date,
             isOneTime: h.is_one_time,
