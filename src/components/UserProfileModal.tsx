@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Download, Trash2, LogOut, AlertCircle, Check, Settings, Palette, Plus, Save } from 'lucide-react';
+import { X, User, Download, Trash2, LogOut, AlertCircle, Check, Settings, Palette, Plus } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { showSuccess, showError, showLoading, dismissToast } from '../utils/toast';
 import CreateWallet from '../../components/CreateWallet';
@@ -36,39 +36,26 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [editingName, setEditingName] = useState(userProfile.name);
-  const [previewColor, setPreviewColor] = useState(userProfile.themeColor || '#06b6d4');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [isSavingColor, setIsSavingColor] = useState(false);
   const colorInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setEditingName(userProfile.name);
-      setPreviewColor(userProfile.themeColor || '#06b6d4');
       setActiveTab('profile');
     }
-  }, [isOpen, userProfile.themeColor, userProfile.name]);
+  }, [isOpen, userProfile.name]);
 
-  const handlePreviewColor = (hex: string) => {
-    setPreviewColor(hex);
-    document.documentElement.style.setProperty('--primary-color', hex);
-  };
-
-  const handleSaveTheme = async () => {
-    const toastId = showLoading('Saving protocol visuals...');
-    setIsSavingColor(true);
+  const handleUpdateColor = async (hex: string) => {
+    const toastId = showLoading('Switching visuals...');
     try {
-      await onUpdateProfile({ themeColor: previewColor });
-      showSuccess(`Visual system locked.`);
+      document.documentElement.style.setProperty('--primary-color', hex);
+      await onUpdateProfile({ themeColor: hex });
+      showSuccess(`Visual system recalibrated.`);
     } catch (e) {
-      showError('Failed to save theme');
-      // Revert preview on error
-      document.documentElement.style.setProperty('--primary-color', userProfile.themeColor || '#06b6d4');
-    } finally { 
-      dismissToast(toastId);
-      setIsSavingColor(false);
-    }
+      showError('Failed to update theme');
+    } finally { dismissToast(toastId); }
   };
 
   const handleSaveName = async () => {
@@ -83,8 +70,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   if (!isOpen) return null;
 
-  const isPresetColor = COLORS.some(c => c.hex.toLowerCase() === previewColor.toLowerCase());
-  const hasColorChanged = previewColor.toLowerCase() !== (userProfile.themeColor || '#06b6d4').toLowerCase();
+  const isPresetColor = COLORS.some(c => c.hex.toLowerCase() === userProfile.themeColor?.toLowerCase());
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
@@ -105,7 +91,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
         <div className="flex bg-white/5 p-1 rounded-2xl mb-8 border border-white/5">
           <button onClick={() => setActiveTab('profile')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'profile' ? 'bg-primary-500 text-black' : 'text-slate-500'}`}>General</button>
-          <button onClick={() => setActiveTab('finance')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'finance' ? 'bg-primary-500 text-black' : 'text-slate-500'}`}>Finances</button>
+          <button onClick={() => setActiveTab('finance')} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'finance' ? 'bg-orange-500 text-black' : 'text-slate-500'}`}>Finanzas</button>
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar space-y-8 pb-4">
@@ -131,17 +117,18 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   {COLORS.map(c => (
                     <button 
                       key={c.hex} 
-                      onClick={() => handlePreviewColor(c.hex)}
-                      className={`w-10 h-10 rounded-full border-2 transition-all ${previewColor.toLowerCase() === c.hex.toLowerCase() ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-60'}`}
+                      onClick={() => handleUpdateColor(c.hex)}
+                      className={`w-10 h-10 rounded-full border-2 transition-all ${userProfile.themeColor === c.hex ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-60'}`}
                       style={{ backgroundColor: c.hex }}
                     />
                   ))}
                   
+                  {/* Selector de color personalizado */}
                   <div className="relative">
                     <button 
                       onClick={() => colorInputRef.current?.click()}
                       className={`w-10 h-10 rounded-full border-2 border-dashed flex items-center justify-center transition-all ${!isPresetColor ? 'border-white scale-110 shadow-lg' : 'border-white/20 opacity-60 hover:opacity-100'}`}
-                      style={{ backgroundColor: !isPresetColor ? previewColor : 'transparent' }}
+                      style={{ backgroundColor: !isPresetColor ? userProfile.themeColor : 'transparent' }}
                     >
                       <Plus size={18} className={!isPresetColor ? 'text-white' : 'text-slate-500'} />
                     </button>
@@ -149,22 +136,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       ref={colorInputRef}
                       type="color"
                       className="absolute inset-0 opacity-0 pointer-events-none"
-                      value={previewColor}
-                      onChange={(e) => handlePreviewColor(e.target.value)}
+                      value={userProfile.themeColor || '#06b6d4'}
+                      onChange={(e) => handleUpdateColor(e.target.value)}
                     />
                   </div>
                 </div>
-
-                {hasColorChanged && (
-                  <button 
-                    onClick={handleSaveTheme}
-                    disabled={isSavingColor}
-                    className="w-full mt-4 bg-primary-500 text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center space-x-2 animate-in slide-in-from-top-2"
-                  >
-                    <Save size={16} />
-                    <span>Apply Theme</span>
-                  </button>
-                )}
               </section>
 
               <section className="pt-8 border-t border-white/5 space-y-3">
