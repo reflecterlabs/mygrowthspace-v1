@@ -11,6 +11,12 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', '@supabase/supabase-js'],
+    include: [
+      'react', 
+      'react-dom', 
+      '@supabase/supabase-js', 
+      '@chipi-stack/chipi-react',
+      '@clerk/clerk-react'
+    ],
   },
 });
