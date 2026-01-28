@@ -4,8 +4,6 @@ import { useTransfer, useGetWallet, ChainToken } from "@chipi-stack/chipi-react"
 import { showSuccess, showError, showLoading, dismissToast } from '../src/utils/toast';
 import { Send, Loader2 } from 'lucide-react';
 
-// const USDC_CONTRACT = "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8"; // No se usa directamente en este componente
-
 export default function Transfer() {
   const { user } = useUser();
   const { getToken } = useAuth();
@@ -35,7 +33,7 @@ export default function Transfer() {
       }
 
       const wallet = await fetchWallet({
-        getBearerToken: () => Promise.resolve(token), // Corregido: Pasar getBearerToken como función
+        getBearerToken: () => Promise.resolve(token),
       });
 
       if (!wallet) {
@@ -44,7 +42,6 @@ export default function Transfer() {
         return;
       }
   
-      // make the transfer
       const transferResponse = await transferAsync({
         bearerToken: token,
         params: {
@@ -61,7 +58,6 @@ export default function Transfer() {
       console.log("transfer response", transferResponse);
       showSuccess("Transfer completed successfully!");
       
-      // Clear form
       setAmount("");
       setRecipientAddress("");
       setEncryptKey("");
@@ -76,7 +72,7 @@ export default function Transfer() {
 
   return (
     <div className="space-y-4 p-6 border border-white/10 rounded-[2.5rem] bg-white/5 backdrop-blur-xl">
-      <div className="flex items-center space-x-2 text-cyan-400 mb-4">
+      <div className="flex items-center space-x-2 text-primary-500 mb-4">
         <Send size={20} />
         <span className="text-[10px] font-black uppercase tracking-widest">Chipi Transfer</span>
       </div>
@@ -88,7 +84,7 @@ export default function Transfer() {
           placeholder="Recipient Address"
           value={recipientAddress}
           onChange={(e) => setRecipientAddress(e.target.value)}
-          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-cyan-500 placeholder:text-slate-600 font-medium"
+          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary-500 placeholder:text-slate-600 font-medium"
         />
         
         <input
@@ -96,7 +92,7 @@ export default function Transfer() {
           placeholder="Amount"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-cyan-500 placeholder:text-slate-600 font-medium"
+          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary-500 placeholder:text-slate-600 font-medium"
         />
         
         <input
@@ -104,13 +100,13 @@ export default function Transfer() {
           placeholder="Encryption Key"
           value={encryptKey}
           onChange={(e) => setEncryptKey(e.target.value)}
-          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-cyan-500 placeholder:text-slate-600 font-medium"
+          className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary-500 placeholder:text-slate-600 font-medium"
         />
         
         <button
           onClick={handleTransfer}
           disabled={isLoadingTransfer || !amount || !recipientAddress || !encryptKey}
-          className="w-full bg-green-500 text-white px-4 py-2 rounded-2xl disabled:opacity-50 w-full font-black text-sm flex items-center justify-center space-x-2 hover:bg-green-400 transition-all active:scale-95"
+          className="w-full bg-primary-500 text-black rounded-2xl py-4 font-black text-sm flex items-center justify-center space-x-2 hover:bg-primary-600 transition-all active:scale-95 disabled:opacity-50"
         >
           {isLoadingTransfer ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
           <span>{isLoadingTransfer ? "Processing..." : "Make Transfer"}</span>
