@@ -8,7 +8,6 @@ import AddHabitModal from './components/AddHabitModal';
 import DateCarousel from './components/DateCarousel';
 import BottomNavBar from './components/BottomNavBar';
 import UserProfileModal from './src/components/UserProfileModal';
-import InsightsPage from './src/pages/InsightsPage';
 import { createClerkSupabaseClient } from './src/lib/supabaseClient';
 import { Habit, UserProfile } from './types';
 import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
@@ -52,7 +51,6 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
 
   const supabase = useMemo(() => createClerkSupabaseClient(getToken), [getToken]);
 
@@ -292,47 +290,36 @@ const App: React.FC = () => {
             </nav>
 
             <main className="p-6 space-y-8 animate-in fade-in duration-500">
-              {currentView === 'home' ? (
-                <>
-                  <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
-                  
-                  <div className="grid gap-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Current Nodes</h3>
-                      <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded-lg border border-cyan-500/20 font-bold uppercase">
-                        {habits.length} Active
-                      </span>
-                    </div>
-                    {habits.map(h => (
-                      <HabitCard 
-                        key={h.id} 
-                        habit={h} 
-                        selectedDateStr={selectedDate} 
-                        onToggle={toggleHabit} 
-                        onDelete={deleteHabit} 
-                        onEdit={() => {}} 
-                      />
-                    ))}
-                    {habits.length === 0 && (
-                      <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600">
-                        <div className="flex justify-center mb-4 opacity-20"><UserIcon size={48} /></div>
-                        <p className="font-bold text-sm">No operational protocols found.</p>
-                        <p className="text-[10px] uppercase tracking-widest mt-2">Initialize a new node to begin.</p>
-                      </div>
-                    )}
+              <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
+              
+              <div className="grid gap-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Current Nodes</h3>
+                  <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded-lg border border-cyan-500/20 font-bold uppercase">
+                    {habits.length} Active
+                  </span>
+                </div>
+                {habits.map(h => (
+                  <HabitCard 
+                    key={h.id} 
+                    habit={h} 
+                    selectedDateStr={selectedDate} 
+                    onToggle={toggleHabit} 
+                    onDelete={deleteHabit} 
+                    onEdit={() => {}} 
+                  />
+                ))}
+                {habits.length === 0 && (
+                  <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600">
+                    <div className="flex justify-center mb-4 opacity-20"><UserIcon size={48} /></div>
+                    <p className="font-bold text-sm">No operational protocols found.</p>
+                    <p className="text-[10px] uppercase tracking-widest mt-2">Initialize a new node to begin.</p>
                   </div>
-                </>
-              ) : (
-                <InsightsPage habits={habits} />
-              )}
+                )}
+              </div>
             </main>
 
-            <BottomNavBar 
-              currentView={currentView}
-              onHomeClick={() => setCurrentView('home')} 
-              onInsightsClick={() => setCurrentView('insights')} 
-              onAddHabitClick={() => setIsModalOpen(true)} 
-            />
+            <BottomNavBar onHomeClick={() => {}} onInsightsClick={() => {}} onAddHabitClick={() => setIsModalOpen(true)} />
             <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
             
             {profile && (
