@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { User as UserIcon, Loader2 } from 'lucide-react';
+import { User as UserIcon, Loader2, AlertCircle } from 'lucide-react';
 import { useUser, useAuth, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react';
-import { jwtDecode } from 'jwt-decode';
 import Onboarding from './components/Onboarding';
 import HabitCard from './components/HabitCard';
 import AddHabitModal from './components/AddHabitModal';
+import EditHabitModal from './components/EditHabitModal';
 import DateCarousel from './components/DateCarousel';
 import BottomNavBar from './components/BottomNavBar';
 import UserProfileModal from './src/components/UserProfileModal';
 import RoutineInput from './src/components/RoutineInput';
+import ManifestHeader from './src/components/ManifestHeader';
+import CategoryFilter from './src/components/CategoryFilter';
 import InsightCard from './components/InsightCard';
 import InsightsPage from './src/pages/InsightsPage';
 import { createClerkSupabaseClient } from './src/lib/supabaseClient';
@@ -52,12 +54,16 @@ const App: React.FC = () => {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'onboarding' | 'ready' | 'error'>('idle');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<SuggestedCard[]>([]);
   const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
 
   const supabase = useMemo(() => createClerkSupabaseClient(getToken), [getToken]);
 
@@ -72,14 +78,7 @@ const App: React.FC = () => {
       try {
         const token = await getToken();
         if (!token) {
-          showError("Could not retrieve session token from Clerk.");
-          setProfileStatus('error');
-          return;
-        }
-
-        const decoded: any = jwtDecode(token);
-        if (!decoded.sub || decoded.sub.startsWith('{{')) {
-          showError("Invalid session token structure. Check Clerk session config.");
+          showError("Could not retrieve session token.");
           setProfileStatus('error');
           return;
         }
@@ -107,8 +106,20 @@ const App: React.FC = () => {
             isPremium: profileData.is_premium,
             identityStatement: profileData.identity_statement,
             focusAreas: profileData.focus_areas,
-            narrative: profileData.narrative
+            narrative: profileData.narrative,
+            themeColor: profileData.theme_color
           });
+
+          // Set theme color CSS variable
+          const themeColor = profileData.theme_color || 'cyan';
+          const rgb = {
+            cyan: '6, 182, 212',
+            emerald: '16, 185, 129',
+            violet: '139, 92, 246',
+            amber: '245, 158, 11',
+            rose: '244, 63, 94'
+          }[themeColor as 'cyan'|'emerald'|'violet'|'amber'|'rose'] || '6, 182, 212';
+          document.documentElement.style.setProperty('--primary-rgb', rgb);
 
           const { data: habitsData } = await supabase.from('habits').select('*').eq('user_id', user.id);
           setHabits((habitsData || []).map((h: any) => ({ 
@@ -148,7 +159,8 @@ const App: React.FC = () => {
         identity_statement: newProfile.identityStatement,
         focus_areas: newProfile.focusAreas,
         narrative: newProfile.narrative,
-        has_completed_onboarding: true
+        has_completed_onboarding: true,
+        theme_color: 'cyan'
       });
       
       if (pErr) throw pErr;
@@ -171,7 +183,6 @@ const App: React.FC = () => {
       setRefreshTrigger(t => t + 1);
     } catch (e: any) {
       showError(e.message || 'Sync failed');
-      console.error("Onboarding error:", e);
     } finally { dismissToast(toastId); }
   };
 
@@ -189,16 +200,16 @@ const App: React.FC = () => {
     }).eq('id', habitId).eq('user_id', user.id);
   };
 
-  const deleteHabit = async (habitId: string) => {
+  const confirmDeleteHabit = async (habitId: string) => {
     if (!user) return;
     try {
       const { error } = await supabase.from('habits').delete().eq('id', habitId).eq('user_id', user.id);
       if (error) throw error;
       setHabits(prev => prev.filter(h => h.id !== habitId));
-      showSuccess('Protocol terminated');
+      showSuccess('Protocol and all recurrences terminated');
+      setDeleteConfirmation(null);
     } catch (e) {
       showError('Failed to delete');
-      console.error(e);
     }
   };
 
@@ -229,8 +240,28 @@ const App: React.FC = () => {
         isOneTime: newH.is_one_time,
         specificDates: newH.specific_dates
       }]);
-      showSuccess('Habit added');
+      showSuccess('Habit deployed');
       setIsModalOpen(false);
+    }
+  };
+
+  const updateExistingHabit = async (updates: Partial<Habit>) => {
+    if (!editingHabit || !user) return;
+    try {
+      const { error } = await supabase.from('habits').update({
+        name: updates.name,
+        category: updates.category,
+        time_of_day: updates.time
+      }).eq('id', editingHabit.id).eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setHabits(prev => prev.map(h => h.id === editingHabit.id ? { ...h, ...updates } : h));
+      showSuccess('Protocol updated');
+      setIsEditModalOpen(false);
+      setEditingHabit(null);
+    } catch (e) {
+      showError('Update failed');
     }
   };
 
@@ -240,70 +271,38 @@ const App: React.FC = () => {
     try {
       const suggestions = await generateSuggestedCards(text, habits);
       setAiSuggestions(suggestions);
-      if (suggestions.length > 0) {
-        showSuccess('New protocols suggested');
-      } else {
-        showSuccess('Routine analyzed - consistency is key');
-      }
+      showSuccess(suggestions.length > 0 ? 'New insights generated' : 'Routine analyzed');
     } catch (e) {
       showError('Analysis failed');
-      console.error(e);
     } finally {
       setIsAnalyzing(false);
       dismissToast(toastId);
     }
   };
 
-  const acceptAiSuggestion = async (habitData: Partial<Habit>, suggestionId: string) => {
-    await saveHabit(habitData);
-    setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId));
-  };
-
-  const handleUpdateProfile = async (newName: string) => {
+  const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return;
-    const { error } = await supabase.from('user_profiles').update({ name: newName }).eq('id', user.id);
+    const dbUpdates: any = {};
+    if (updates.name) dbUpdates.name = updates.name;
+    if (updates.themeColor) dbUpdates.theme_color = updates.themeColor;
+    
+    const { error } = await supabase.from('user_profiles').update(dbUpdates).eq('id', user.id);
     if (error) throw error;
-    setProfile(prev => prev ? { ...prev, name: newName } : null);
+    setProfile(prev => prev ? { ...prev, ...updates } : null);
   };
 
-  const handleDownloadData = () => {
-    const data = { profile, habits };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `growth-space-data-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showSuccess('Data package ready');
-  };
+  const filteredHabits = habits.filter(h => selectedCategory === 'All' || h.category === selectedCategory);
 
-  const handleDeleteAccount = async () => {
-    if (!user) return;
-    const token = await getToken();
-    const response = await fetch('https://dtyzunvgbmnheqbubhef.supabase.co/functions/v1/delete-user', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!response.ok) throw new Error('Failed to delete account');
-    await signOut();
-  };
-
-  if (!isLoaded || profileStatus === 'loading') return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="animate-spin text-cyan-400" /></div>;
+  if (!isLoaded || profileStatus === 'loading') return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="animate-spin text-primary-500" /></div>;
 
   return (
     <>
       <SignedOut>
         <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-20 h-20 bg-cyan-500/10 rounded-3xl flex items-center justify-center text-cyan-400 mb-8 border border-cyan-500/20">
-            <UserIcon size={40} />
-          </div>
+          <div className="w-20 h-20 bg-primary-500/10 rounded-3xl flex items-center justify-center text-primary-500 mb-8 border border-primary-500/20"><UserIcon size={40} /></div>
           <h1 className="text-4xl font-black text-white mb-4 tracking-tighter">My Growth Space</h1>
-          <p className="text-slate-500 max-w-xs mb-8 font-medium">Initialize your identity-based habit protocols.</p>
           <SignInButton mode="modal">
-            <button className="bg-white text-black px-12 py-5 rounded-[2rem] font-black text-lg hover:scale-105 transition-all active:scale-95 shadow-2xl">
-              Establish Link
-            </button>
+            <button className="bg-white text-black px-12 py-5 rounded-[2rem] font-black text-lg shadow-2xl">Establish Link</button>
           </SignInButton>
         </div>
       </SignedOut>
@@ -313,88 +312,65 @@ const App: React.FC = () => {
           <div className="min-h-screen bg-[#0a0a0c] text-white pb-48">
             <nav className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0a0a0c]/80 backdrop-blur-md sticky top-0 z-30">
               <div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Protocol Active</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Operator Linked</p>
                 <h2 className="text-2xl font-black tracking-tight">{profile?.name}</h2>
               </div>
-              <button 
-                onClick={() => setIsProfileModalOpen(true)} 
-                className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all"
-              >
-                <UserIcon size={20} className="text-cyan-400" />
-              </button>
+              <button onClick={() => setIsProfileModalOpen(true)} className="p-3 bg-white/5 border border-white/10 rounded-2xl"><UserIcon size={20} className="text-primary-500" /></button>
             </nav>
 
             {currentView === 'home' ? (
-              <>
-                <main className="p-6 space-y-8 animate-in fade-in duration-500">
-                  <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
-                  
-                  {aiSuggestions.length > 0 && (
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Neural Suggestions</h3>
-                      {aiSuggestions.map(suggestion => (
-                        <InsightCard 
-                          key={suggestion.id} 
-                          suggestion={suggestion} 
-                          onAccept={(habit) => acceptAiSuggestion(habit, suggestion.id)}
-                          onReject={() => setAiSuggestions(prev => prev.filter(s => s.id !== suggestion.id))}
-                        />
-                      ))}
-                    </div>
-                  )}
+              <main className="p-6 space-y-4 animate-in fade-in duration-500">
+                <ManifestHeader statement={profile?.identityStatement || ''} />
+                <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
+                <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
+                
+                {aiSuggestions.map(s => (
+                  <InsightCard key={s.id} suggestion={s} onAccept={(h) => saveHabit(h)} onReject={() => setAiSuggestions(prev => prev.filter(x => x.id !== s.id))} />
+                ))}
 
-                  <div className="grid gap-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Current Nodes</h3>
-                      <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded-lg border border-cyan-500/20 font-bold uppercase">
-                        {habits.length} Active
-                      </span>
-                    </div>
-                    {habits.map(h => (
-                      <HabitCard 
-                        key={h.id} 
-                        habit={h} 
-                        selectedDateStr={selectedDate} 
-                        onToggle={toggleHabit} 
-                        onDelete={deleteHabit} 
-                        onEdit={() => {}} 
-                      />
-                    ))}
-                    {habits.length === 0 && (
-                      <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600">
-                        <div className="flex justify-center mb-4 opacity-20"><UserIcon size={48} /></div>
-                        <p className="font-bold text-sm">No operational protocols found.</p>
-                        <p className="text-[10px] uppercase tracking-widest mt-2">Initialize a new node to begin.</p>
-                      </div>
-                    )}
-                  </div>
-                </main>
+                <div className="grid gap-3 pt-4">
+                  {filteredHabits.map(h => (
+                    <HabitCard 
+                      key={h.id} 
+                      habit={h} 
+                      selectedDateStr={selectedDate} 
+                      onToggle={toggleHabit} 
+                      onDelete={(id) => setDeleteConfirmation(id)} 
+                      onEdit={(habit) => { setEditingHabit(habit); setIsEditModalOpen(true); }} 
+                    />
+                  ))}
+                  {filteredHabits.length === 0 && <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">No active protocols in this vector.</div>}
+                </div>
                 <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} />
-              </>
-            ) : (
-              <main className="animate-in fade-in duration-500">
-                <InsightsPage habits={habits} />
               </main>
+            ) : (
+              <main className="animate-in fade-in duration-500"><InsightsPage habits={habits} /></main>
             )}
 
-            <BottomNavBar 
-              currentView={currentView}
-              onHomeClick={() => setCurrentView('home')} 
-              onInsightsClick={() => setCurrentView('insights')} 
-              onAddHabitClick={() => setIsModalOpen(true)} 
-            />
+            <BottomNavBar currentView={currentView} onHomeClick={() => setCurrentView('home')} onInsightsClick={() => setCurrentView('insights')} onAddHabitClick={() => setIsModalOpen(true)} />
             
             <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} />
+            <EditHabitModal isOpen={isEditModalOpen} habit={editingHabit} onClose={() => { setIsEditModalOpen(false); setEditingHabit(null); }} onSave={updateExistingHabit} />
             
+            {deleteConfirmation && (
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+                  <AlertCircle size={40} className="text-red-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-black text-white mb-2">Terminate Protocol?</h3>
+                  <p className="text-slate-400 text-xs mb-8">This will delete the habit and all its recurring instances from your schedule.</p>
+                  <div className="flex gap-4">
+                    <button onClick={() => setDeleteConfirmation(null)} className="flex-1 py-3 bg-white/5 rounded-2xl text-white font-black">Cancel</button>
+                    <button onClick={() => confirmDeleteHabit(deleteConfirmation)} className="flex-1 py-3 bg-red-500/20 rounded-2xl text-red-400 font-black">Confirm</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {profile && (
               <UserProfileModal 
-                isOpen={isProfileModalOpen} 
-                onClose={() => setIsProfileModalOpen(false)} 
-                userProfile={profile}
-                onUpdateProfile={handleUpdateProfile}
-                onDownloadData={handleDownloadData}
-                onDeleteAccount={handleDeleteAccount}
-                onLogout={async () => signOut()}
+                isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} 
+                userProfile={profile} onUpdateProfile={handleUpdateProfile}
+                onDownloadData={() => {}} onDeleteAccount={async () => {}} onLogout={async () => signOut()}
               />
             )}
           </div>

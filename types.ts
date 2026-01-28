@@ -2,19 +2,18 @@ export interface Habit {
   id: string;
   name: string;
   category: 'Health' | 'Mindset' | 'Productivity' | 'Finance' | 'Social';
-  frequency: 'daily' | 'weekly' | 'one-time'; // Añadido 'one-time'
-  daysOfWeek: number[]; // 0-6 (Sunday-Saturday)
-  time?: string; // HH:mm format
+  frequency: 'daily' | 'weekly' | 'one-time';
+  daysOfWeek: number[]; 
+  time?: string; 
   description?: string;
   streak: number;
-  completedDates: string[]; // ISO Strings (YYYY-MM-DD)
+  completedDates: string[]; 
   createdAt: string;
-  // New fields for exact scheduling
-  startDate?: string; // ISO date string
-  endDate?: string; // ISO date string
-  specificDates?: string[]; // Array of YYYY-MM-DD strings
+  startDate?: string;
+  endDate?: string;
+  specificDates?: string[];
   isOneTime?: boolean;
-  lastCompletedDate?: string | null; // Añadido para consistencia
+  lastCompletedDate?: string | null;
 }
 
 export interface UserProfile {
@@ -24,6 +23,7 @@ export interface UserProfile {
   identityStatement: string;
   focusAreas: string[];
   narrative?: string;
+  themeColor?: string;
 }
 
 export interface MotivationTip {

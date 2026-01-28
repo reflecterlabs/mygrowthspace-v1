@@ -1,7 +1,16 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --primary-rgb: 6, 182, 212; /* Cyan Default */
+  }
+  
   body {
     @apply bg-[#0a0a0c] text-white antialiased;
   }
+}
+
+@theme {
+  --color-primary-500: rgb(var(--primary-rgb));
+  --color-primary-600: rgba(var(--primary-rgb), 0.8);
 }
