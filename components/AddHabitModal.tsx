@@ -18,16 +18,16 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300"> {/* Cambiado de bg-black/80 a bg-black/90 */}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-[#0a0a0c] w-full max-w-md border border-white/10 rounded-[3rem] p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-blue-600"></div>
+        <div className="absolute top-0 left-0 w-full h-1 bg-primary-500"></div>
         
         <button onClick={onClose} className="absolute top-6 right-6 text-slate-500 hover:text-white">
           <X size={24} />
         </button>
 
         <div className="mb-8">
-          <div className="flex items-center space-x-2 text-cyan-400 mb-2">
+          <div className="flex items-center space-x-2 text-primary-500 mb-2">
             <Dumbbell size={20} />
             <span className="text-[10px] font-black uppercase tracking-widest">New Node</span>
           </div>
@@ -39,7 +39,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Identity Action</label>
             <input 
               autoFocus
-              className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-cyan-500 transition-all font-bold placeholder:text-slate-800"
+              className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-primary-500 transition-all font-bold placeholder:text-slate-800"
               placeholder="e.g. 20m Morning Meditation"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -53,7 +53,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
                 <button 
                   key={cat}
                   onClick={() => setCategory(cat)}
-                  className={`py-3 px-1 rounded-xl text-[9px] font-black uppercase transition-all ${category === cat ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20' : 'bg-white/5 text-slate-500 border border-white/5'}`}
+                  className={`py-3 px-1 rounded-xl text-[9px] font-black uppercase transition-all ${category === cat ? 'bg-primary-500 text-black shadow-lg shadow-primary-500/20' : 'bg-white/5 text-slate-500 border border-white/5'}`}
                 >
                   {cat}
                 </button>
@@ -77,7 +77,7 @@ const AddHabitModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => {
           <button 
             disabled={!name}
             onClick={() => onSave({ name, category, time, daysOfWeek: [1,2,3,4,5], frequency: 'daily' })}
-            className="w-full bg-white text-black py-5 rounded-3xl font-black text-lg flex items-center justify-center space-x-2 hover:bg-cyan-500 transition-all active:scale-95 disabled:opacity-20 mt-4 shadow-xl"
+            className="w-full bg-white text-black py-5 rounded-3xl font-black text-lg flex items-center justify-center space-x-2 hover:bg-primary-500 transition-all active:scale-95 disabled:opacity-20 mt-4 shadow-xl"
           >
             <Check size={24} />
             <span>Deploy Protocol</span>

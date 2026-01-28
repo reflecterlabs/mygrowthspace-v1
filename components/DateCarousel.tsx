@@ -84,7 +84,7 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
               }`}
             >
               {isToday && (
-                <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 bg-orange-600 text-white px-2 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black shadow-[0_2px_4px_rgba(0,0,0,0.3)] border border-orange-400 z-10 whitespace-nowrap">
+                <span className="absolute -top-2 -right-1 bg-orange-600 text-white px-2 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black shadow-[0_2px_4px_rgba(0,0,0,0.3)] border border-orange-400 z-10 whitespace-nowrap rotate-3">
                   HOY
                 </span>
               )}
