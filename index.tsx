@@ -4,7 +4,7 @@ import './src/index.css';
 import ToastProvider from './src/components/ToastProvider';
 import { ClerkProvider } from '@clerk/clerk-react';
 import { ChipiProvider } from '@chipi-stack/chipi-react';
-import { ChipiClient } from '@chipi-stack/backend'; // Importar ChipiClient
+// Eliminado: import { ChipiClient } from '@chipi-stack/backend'; // Ya no es necesario importar ChipiClient aquí
 
 const container = document.getElementById('root');
 
@@ -20,14 +20,13 @@ if (!CHIPI_API_KEY) {
   throw new Error("Missing Chipi API Key. Please set VITE_CHIPI_API_KEY in your .env file.");
 }
 
-// Crear una instancia de ChipiClient
-const chipiClient = new ChipiClient({ apiKey: CHIPI_API_KEY });
+// Eliminado: const chipiClient = new ChipiClient(CHIPI_API_KEY); // Ya no es necesario instanciar ChipiClient aquí
 
 if (container) {
   const root = createRoot(container);
   root.render(
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <ChipiProvider config={{ client: chipiClient }}> {/* Corregido: Pasar la instancia del cliente dentro de 'config' */}
+      <ChipiProvider apiKey={CHIPI_API_KEY}> {/* Corregido: Pasar la apiKey directamente como prop */}
         <ToastProvider />
         <App />
       </ChipiProvider>
