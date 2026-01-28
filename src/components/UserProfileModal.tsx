@@ -69,10 +69,10 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   };
 
   const handleSaveTheme = async () => {
-    const toastId = showLoading('Saving protocol visuals...');
+    const toastId = showLoading(t('toastSavingVisuals'));
     try {
       await onUpdateProfile({ themeColor: pendingColor });
-      showSuccess(`Visual system recalibrated.`);
+      showSuccess(t('toastVisualsRecalibrated'));
     } catch (e) {
       showError('Failed to update theme');
     } finally { dismissToast(toastId); }

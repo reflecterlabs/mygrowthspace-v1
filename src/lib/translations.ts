@@ -76,7 +76,17 @@ export const translations = {
     neuralSuggestion: "Neural Suggestion",
     syncToRoutine: "Sync to Routine",
     protocolInsight: "Protocol Insight",
-    manifestTitle: "Person's Manifest"
+    manifestTitle: "Person's Manifest",
+    toastActivatingProtocols: "Activating protocols...",
+    toastOnboardingComplete: "Onboarding complete!",
+    toastProtocolTerminated: "Protocol terminated",
+    toastHabitDeployed: "Habit deployed",
+    toastProtocolUpdated: "Protocol updated",
+    toastNeuralProcessing: "Neural processing...",
+    toastInsightsGenerated: "New insights generated",
+    toastRoutineAnalyzed: "Routine analyzed",
+    toastSavingVisuals: "Saving protocol visuals...",
+    toastVisualsRecalibrated: "Visual system recalibrated."
   },
   es: {
     appName: "Mi Espacio de Crecimiento",
@@ -155,7 +165,17 @@ export const translations = {
     neuralSuggestion: "Sugerencia Neuronal",
     syncToRoutine: "Sincronizar Rutina",
     protocolInsight: "Insight del Protocolo",
-    manifestTitle: "Manifiesto Personal"
+    manifestTitle: "Manifiesto Personal",
+    toastActivatingProtocols: "Activando protocolos...",
+    toastOnboardingComplete: "¡Onboarding completado!",
+    toastProtocolTerminated: "Protocolo terminado",
+    toastHabitDeployed: "Hábito desplegado",
+    toastProtocolUpdated: "Protocolo actualizado",
+    toastNeuralProcessing: "Procesamiento neuronal...",
+    toastInsightsGenerated: "Nuevos insights generados",
+    toastRoutineAnalyzed: "Rutina analizada",
+    toastSavingVisuals: "Guardando visuales del protocolo...",
+    toastVisualsRecalibrated: "Sistema visual recalibrado."
   },
   pt: {
     appName: "Meu Espaço de Crescimento",
@@ -199,7 +219,7 @@ export const translations = {
     insightsNodes: "NÓS",
     insightsAwaiting: "Aguardando dados para este vetor...",
     habitStreak: "SEQUÊNCIA",
-    habitProtocolActive: "PROTOCOLO ACTIVO",
+    habitProtocolActive: "PROTOCOLO ATIVO",
     modalNewNode: "Novo Nó",
     modalEditNode: "Editar Nó",
     modalInitialize: "Inicializar Protocolo",
@@ -234,7 +254,17 @@ export const translations = {
     neuralSuggestion: "Sugestão Neuronal",
     syncToRoutine: "Sincronizar Rotina",
     protocolInsight: "Insight do Protocolo",
-    manifestTitle: "Manifesto Pessoal"
+    manifestTitle: "Manifesto Pessoal",
+    toastActivatingProtocols: "Ativando protocolos...",
+    toastOnboardingComplete: "Onboarding completo!",
+    toastProtocolTerminated: "Protocolo terminado",
+    toastHabitDeployed: "Hábito implantado",
+    toastProtocolUpdated: "Protocolo atualizado",
+    toastNeuralProcessing: "Processamento neural...",
+    toastInsightsGenerated: "Novos insights gerados",
+    toastRoutineAnalyzed: "Rotina analisada",
+    toastSavingVisuals: "Salvando visuais do protocolo...",
+    toastVisualsRecalibrated: "Sistema visual recalibrado."
   },
   hi: {
     appName: "मेरा विकास स्थान",
@@ -312,8 +342,18 @@ export const translations = {
     financeCreating: "बना रहा है...",
     neuralSuggestion: "न्यूरल सुझाव",
     syncToRoutine: "दिनचर्या में सिंक करें",
-    protocolInsight: "प्रोटोकॉल अंतर्दृष्टि",
-    manifestTitle: "व्यक्ति का घोषणापत्र"
+    protocolInsight: "प्रोटोकॉल अंतर्दष्टि",
+    manifestTitle: "व्यक्ति का घोषणापत्र",
+    toastActivatingProtocols: "प्रोटोकॉल सक्रिय कर रहा है...",
+    toastOnboardingComplete: "ऑनबोर्डिंग पूर्ण!",
+    toastProtocolTerminated: "प्रोटोकॉल समाप्त",
+    toastHabitDeployed: "आदत तैनात",
+    toastProtocolUpdated: "प्रोटोकॉल अपडेट किया गया",
+    toastNeuralProcessing: "न्यूरल प्रोसेसिंग...",
+    toastInsightsGenerated: "नई अंतर्दृष्टि उत्पन्न हुई",
+    toastRoutineAnalyzed: "दिनचर्या का विश्लेषण किया गया",
+    toastSavingVisuals: "प्रोटोकॉल दृश्यों को सहेजा जा रहा है...",
+    toastVisualsRecalibrated: "दृश्य प्रणाली पुन: कैलिब्रेटेड।"
   },
   ru: {
     appName: "Мое Пространство Роста",
@@ -392,7 +432,17 @@ export const translations = {
     neuralSuggestion: "Нейронное предложение",
     syncToRoutine: "Синхронизировать",
     protocolInsight: "Инсайт протокола",
-    manifestTitle: "Манифест личности"
+    manifestTitle: "Манифест личности",
+    toastActivatingProtocols: "Активация протоколов...",
+    toastOnboardingComplete: "Онбординг завершен!",
+    toastProtocolTerminated: "Протокол завершен",
+    toastHabitDeployed: "Привычка развернута",
+    toastProtocolUpdated: "Протокол обновлен",
+    toastNeuralProcessing: "Нейронная обработка...",
+    toastInsightsGenerated: "Созданы новые инсайты",
+    toastRoutineAnalyzed: "Рутина проанализирована",
+    toastSavingVisuals: "Сохранение визуальных эффектов...",
+    toastVisualsRecalibrated: "Визуальная система перекалибрована."
   },
   zh: {
     appName: "我的成长空间",
@@ -471,7 +521,17 @@ export const translations = {
     neuralSuggestion: "神经建议",
     syncToRoutine: "同步到日常",
     protocolInsight: "协议洞察",
-    manifestTitle: "个人宣言"
+    manifestTitle: "个人宣言",
+    toastActivatingProtocols: "正在激活协议...",
+    toastOnboardingComplete: "新手引导完成！",
+    toastProtocolTerminated: "协议已终止",
+    toastHabitDeployed: "习惯已部署",
+    toastProtocolUpdated: "协议已更新",
+    toastNeuralProcessing: "神经处理中...",
+    toastInsightsGenerated: "生成了新见解",
+    toastRoutineAnalyzed: "常规分析完成",
+    toastSavingVisuals: "正在保存协议视觉效果...",
+    toastVisualsRecalibrated: "视觉系统已重新校准。"
   }
 };
 

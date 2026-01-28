@@ -146,7 +146,7 @@ const App: React.FC = () => {
 
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
     if (!user) return;
-    const toastId = showLoading('Activating protocols...');
+    const toastId = showLoading(t('toastActivatingProtocols'));
     try {
       const { error: pErr } = await supabase.from('user_profiles').upsert({
         id: user.id, 
@@ -176,7 +176,7 @@ const App: React.FC = () => {
         if (hErr) throw hErr;
       }
       
-      showSuccess('Onboarding complete!');
+      showSuccess(t('toastOnboardingComplete'));
       setRefreshTrigger(t => t + 1);
     } catch (e: any) {
       showError(e.message || 'Sync failed');
@@ -203,7 +203,7 @@ const App: React.FC = () => {
       const { error } = await supabase.from('habits').delete().eq('id', habitId).eq('user_id', user.id);
       if (error) throw error;
       setHabits(prev => prev.filter(h => h.id !== habitId));
-      showSuccess('Protocol terminated');
+      showSuccess(t('toastProtocolTerminated'));
       setDeleteConfirmation(null);
     } catch (e) {
       showError('Failed to delete');
@@ -237,7 +237,7 @@ const App: React.FC = () => {
         isOneTime: newH.is_one_time,
         specificDates: newH.specific_dates
       }]);
-      showSuccess('Habit deployed');
+      showSuccess(t('toastHabitDeployed'));
       setIsModalOpen(false);
     }
   };
@@ -254,7 +254,7 @@ const App: React.FC = () => {
       if (error) throw error;
 
       setHabits(prev => prev.map(h => h.id === editingHabit.id ? { ...h, ...updates } : h));
-      showSuccess('Protocol updated');
+      showSuccess(t('toastProtocolUpdated'));
       setIsEditModalOpen(false);
       setEditingHabit(null);
     } catch (e) {
@@ -264,11 +264,11 @@ const App: React.FC = () => {
 
   const handleAnalyzeRoutine = async (text: string) => {
     setIsAnalyzing(true);
-    const toastId = showLoading('Neural processing...');
+    const toastId = showLoading(t('toastNeuralProcessing'));
     try {
       const suggestions = await generateSuggestedCards(text, habits);
       setAiSuggestions(suggestions);
-      showSuccess(suggestions.length > 0 ? 'New insights generated' : 'Routine analyzed');
+      showSuccess(suggestions.length > 0 ? t('toastInsightsGenerated') : t('toastRoutineAnalyzed'));
     } catch (e) {
       showError('Analysis failed');
     } finally {
