@@ -6,7 +6,6 @@ interface DateCarouselProps {
   onDateChange: (date: string) => void;
 }
 
-// Helper para obtener YYYY-MM-DD en hora local de un objeto Date
 const getLocalDateString = (date: Date): string => {
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -14,25 +13,22 @@ const getLocalDateString = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-// Helper para crear un objeto Date a partir de una cadena YYYY-MM-DD, interpretado como hora local
 const createLocalDate = (dateString: string): Date => {
   const [year, month, day] = dateString.split('-').map(Number);
-  // Month es 0-indexado en el constructor de Date
   return new Date(year, month - 1, day); 
 };
 
 const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange }) => {
-  // Aumentamos el rango a 4 para mostrar 9 días en total (4 antes, el central, 4 después)
   const generateDateRange = (centerDateStr: string, range: number = 4) => { 
     const dates: { date: string; label: string; dayName: string }[] = [];
-    const center = createLocalDate(centerDateStr); // Usar la función para crear fecha local
+    const center = createLocalDate(centerDateStr);
 
     for (let i = -range; i <= range; i++) {
-      const date = new Date(center); // Clonar la fecha para no modificar la original
+      const date = new Date(center);
       date.setDate(date.getDate() + i);
-      const dateStr = getLocalDateString(date); // Obtener la cadena de fecha local
+      const dateStr = getLocalDateString(date);
       const dayIndex = date.getDay();
-      const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']; // Nombres de días en español
+      const dayNames = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
       const dayName = dayNames[dayIndex];
       const dayNum = date.getDate();
 
@@ -58,19 +54,19 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
     onDateChange(getLocalDateString(next));
   };
 
-  const today = getLocalDateString(new Date()); // Obtener la fecha de hoy en hora local
-  const dates = generateDateRange(selectedDate); // Ahora generará 9 días por defecto
+  const today = getLocalDateString(new Date());
+  const dates = generateDateRange(selectedDate);
 
   return (
-    <div className="flex items-center gap-3 bg-white/5 rounded-[2.5rem] p-4 border border-white/10 w-full">
+    <div className="flex items-center gap-2 bg-white/5 rounded-[3rem] p-3 border border-white/10 w-full shadow-2xl">
       <button
         onClick={handlePrevDay}
-        className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-400/50 transition-all"
+        className="flex-shrink-0 w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 hover:text-cyan-400 hover:border-cyan-400/50 transition-all active:scale-90"
       >
-        <ChevronLeft size={18} />
+        <ChevronLeft size={20} />
       </button>
 
-      <div className="flex gap-2 flex-1 overflow-x-auto no-scrollbar px-4">
+      <div className="flex gap-2 flex-1 justify-between overflow-x-auto no-scrollbar px-2">
         {dates.map((d) => {
           const isSelected = d.date === selectedDate;
           const isToday = d.date === today;
@@ -79,22 +75,22 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
             <button
               key={d.date}
               onClick={() => onDateChange(d.date)}
-              className={`flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl border-2 transition-all ${
+              className={`flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl border-2 transition-all duration-300 ${
                 isSelected
-                  ? 'bg-cyan-500/20 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                  ? 'bg-cyan-500/20 border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.2)]'
                   : isToday
-                  ? 'bg-white/10 border-white/20 hover:border-cyan-400/50'
-                  : 'bg-white/5 border-white/10 hover:border-white/20'
+                  ? 'bg-white/10 border-white/20'
+                  : 'bg-white/5 border-white/5 hover:border-white/20'
               }`}
             >
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+              <span className={`text-[9px] font-black uppercase tracking-tighter ${isSelected ? 'text-cyan-400' : 'text-slate-500'}`}>
                 {d.dayName}
               </span>
-              <span className={`text-base font-black ${isSelected ? 'text-cyan-400' : 'text-white'}`}>
+              <span className={`text-base font-black leading-none mt-1 ${isSelected ? 'text-cyan-400' : 'text-white'}`}>
                 {d.label}
               </span>
               {isToday && (
-                <span className="text-[8px] font-black text-orange-500 uppercase mt-0.5">HOY</span>
+                <span className="text-[7px] font-black text-orange-500 mt-0.5">HOY</span>
               )}
             </button>
           );
@@ -103,9 +99,9 @@ const DateCarousel: React.FC<DateCarouselProps> = ({ selectedDate, onDateChange 
 
       <button
         onClick={handleNextDay}
-        className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-400/50 transition-all"
+        className="flex-shrink-0 w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 hover:text-cyan-400 hover:border-cyan-400/50 transition-all active:scale-90"
       >
-        <ChevronRight size={18} />
+        <ChevronRight size={20} />
       </button>
     </div>
   );
