@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useUser, useAuth } from "@clerk/clerk-react";
-import { useCreateWallet, useGetWallet, useBalance, ChainToken } from "@chipi-stack/chipi-react";
+import { useCreateWallet, useGetWallet, useGetBalance, ChainToken } from "@chipi-stack/chipi-react";
 import { showSuccess, showError, showLoading, dismissToast } from '../src/utils/toast';
 import { Loader2, Wallet, Copy, RefreshCw, CheckCircle2, Plus } from 'lucide-react';
 
@@ -9,7 +9,7 @@ export default function CreateWallet() {
   const { getToken } = useAuth();
   const { createWalletAsync, isLoading: isCreating } = useCreateWallet();
   const { fetchWallet, isLoading: isFetchingWallet } = useGetWallet();
-  const { fetchBalance, isLoading: isFetchingBalance } = useBalance();
+  const { fetchBalance, isLoading: isFetchingBalance } = useGetBalance();
   
   const [walletData, setWalletData] = useState<any>(null);
   const [balance, setBalance] = useState<number | null>(null);
