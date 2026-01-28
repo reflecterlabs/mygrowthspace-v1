@@ -1,13 +1,17 @@
 import React from 'react';
+import { getTranslation } from '../lib/translations';
 
 const CATEGORIES = ['All', 'Health', 'Mindset', 'Productivity', 'Finance', 'Social'];
 
 interface CategoryFilterProps {
   selectedCategory: string;
   onSelect: (category: string) => void;
+  language?: string;
 }
 
-const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory, onSelect }) => {
+const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory, onSelect, language = 'en' }) => {
+  const t = (key: any) => getTranslation(language, key);
+
   return (
     <div className="flex items-center justify-center space-x-2 overflow-x-auto no-scrollbar pb-2 mb-4">
       {CATEGORIES.map(cat => (
@@ -20,7 +24,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory, onSel
               : 'bg-white/5 text-slate-500 border border-white/5 hover:text-white'
           }`}
         >
-          {cat}
+          {t(cat.toLowerCase() as any)}
         </button>
       ))}
     </div>

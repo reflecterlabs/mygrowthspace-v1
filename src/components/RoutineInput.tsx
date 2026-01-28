@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { Sparkles, Send, Loader2 } from 'lucide-react';
+import { getTranslation } from '../lib/translations';
 
 interface RoutineInputProps {
   onAnalyze: (text: string) => Promise<void>;
   isLoading: boolean;
+  language?: string;
 }
 
-const RoutineInput: React.FC<RoutineInputProps> = ({ onAnalyze, isLoading }) => {
+const RoutineInput: React.FC<RoutineInputProps> = ({ onAnalyze, isLoading, language = 'en' }) => {
   const [text, setText] = useState('');
+  const t = (key: any) => getTranslation(language, key);
 
   const handleSubmit = async () => {
     if (!text.trim() || isLoading) return;
@@ -25,7 +28,7 @@ const RoutineInput: React.FC<RoutineInputProps> = ({ onAnalyze, isLoading }) => 
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Describe nuevos hábitos y modificaciones"
+              placeholder={t('routinePlaceholder')}
               className="w-full bg-transparent border-none text-[18px] leading-snug text-white placeholder:text-slate-600 outline-none resize-none py-2 no-scrollbar font-bold tracking-tight"
               rows={1}
               onInput={(e) => {

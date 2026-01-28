@@ -320,7 +320,7 @@ const App: React.FC = () => {
               <main className="p-6 space-y-4 animate-in fade-in duration-500">
                 <ManifestHeader statement={profile?.identityStatement || ''} />
                 <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
-                <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
+                <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} language={profile?.language} />
                 
                 {aiSuggestions.map(s => (
                   <InsightCard key={s.id} suggestion={s} onAccept={(h) => saveHabit(h)} onReject={() => setAiSuggestions(prev => prev.filter(x => x.id !== s.id))} />
@@ -335,16 +335,17 @@ const App: React.FC = () => {
                       onToggle={toggleHabit} 
                       onDelete={(id) => setDeleteConfirmation(id)} 
                       onEdit={(habit) => { setEditingHabit(habit); setIsEditModalOpen(true); }} 
+                      language={profile?.language}
                     />
                   ))}
                   {filteredHabits.length === 0 && <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">No active protocols.</div>}
                 </div>
               </main>
             ) : (
-              <main className="animate-in fade-in duration-500"><InsightsPage habits={habits} /></main>
+              <main className="animate-in fade-in duration-500"><InsightsPage habits={habits} language={profile?.language} /></main>
             )}
 
-            <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} />
+            <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} language={profile?.language} />
 
             <BottomNavBar currentView={currentView} onHomeClick={() => setCurrentView('home')} onInsightsClick={() => setCurrentView('insights')} onAddHabitClick={() => setIsModalOpen(true)} />
             
