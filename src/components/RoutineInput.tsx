@@ -16,7 +16,7 @@ const RoutineInput: React.FC<RoutineInputProps> = ({ onAnalyze, isLoading }) => 
   };
 
   return (
-    <div className="fixed bottom-32 left-6 right-6 z-40 animate-in slide-in-from-bottom-4 duration-500">
+    <div className="fixed bottom-28 left-6 right-6 z-40 animate-in slide-in-from-bottom-4 duration-500">
       <div className="bg-[#1a1a1e]/95 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-4 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.9)] group relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
         
