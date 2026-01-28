@@ -8,9 +8,12 @@ import AddHabitModal from './components/AddHabitModal';
 import DateCarousel from './components/DateCarousel';
 import BottomNavBar from './components/BottomNavBar';
 import UserProfileModal from './src/components/UserProfileModal';
+import RoutineInput from './src/components/RoutineInput';
+import InsightCard from './components/InsightCard';
 import { createClerkSupabaseClient } from './src/lib/supabaseClient';
-import { Habit, UserProfile } from './types';
+import { Habit, UserProfile, SuggestedCard } from './types';
 import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
+import { generateSuggestedCards } from './services/geminiService';
 
 const calculateStreak = (_habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
   const sortedDates = [...allCompletedDates].sort();
@@ -51,6 +54,8 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<SuggestedCard[]>([]);
 
   const supabase = useMemo(() => createClerkSupabaseClient(getToken), [getToken]);
 
@@ -203,7 +208,8 @@ const App: React.FC = () => {
       frequency: data.frequency || 'daily',
       days_of_week: data.daysOfWeek || [0,1,2,3,4,5,6],
       time_of_day: data.time,
-      is_one_time: data.isOneTime || false
+      is_one_time: data.isOneTime || false,
+      specific_dates: data.specificDates || []
     }).select().single();
 
     if (newH) {
@@ -217,11 +223,37 @@ const App: React.FC = () => {
         streak: 0,
         completedDates: [],
         createdAt: newH.created_at,
-        isOneTime: newH.is_one_time
+        isOneTime: newH.is_one_time,
+        specificDates: newH.specific_dates
       }]);
       showSuccess('Habit added');
       setIsModalOpen(false);
     }
+  };
+
+  const handleAnalyzeRoutine = async (text: string) => {
+    setIsAnalyzing(true);
+    const toastId = showLoading('Neural processing...');
+    try {
+      const suggestions = await generateSuggestedCards(text, habits);
+      setAiSuggestions(suggestions);
+      if (suggestions.length > 0) {
+        showSuccess('New protocols suggested');
+      } else {
+        showSuccess('Routine analyzed - consistency is key');
+      }
+    } catch (e) {
+      showError('Analysis failed');
+      console.error(e);
+    } finally {
+      setIsAnalyzing(false);
+      dismissToast(toastId);
+    }
+  };
+
+  const acceptAiSuggestion = async (habitData: Partial<Habit>, suggestionId: string) => {
+    await saveHabit(habitData);
+    setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId));
   };
 
   const handleUpdateProfile = async (newName: string) => {
@@ -292,9 +324,27 @@ const App: React.FC = () => {
             <main className="p-6 space-y-8 animate-in fade-in duration-500">
               <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
               
+              {/* Sección de entrada Neural (Routine Input) */}
+              <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} />
+
+              {/* Sugerencias de la IA */}
+              {aiSuggestions.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Neural Suggestions</h3>
+                  {aiSuggestions.map(suggestion => (
+                    <InsightCard 
+                      key={suggestion.id} 
+                      suggestion={suggestion} 
+                      onAccept={(habit) => acceptAiSuggestion(habit, suggestion.id)}
+                      onReject={() => setAiSuggestions(prev => prev.filter(s => s.id !== suggestion.id))}
+                    />
+                  ))}
+                </div>
+              )}
+
               <div className="grid gap-3">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Current Nodes</h3>
+                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Current Nodes</h3>
                   <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded-lg border border-cyan-500/20 font-bold uppercase">
                     {habits.length} Active
                   </span>
