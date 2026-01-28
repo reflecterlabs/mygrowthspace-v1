@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Download, Trash2, LogOut, AlertCircle, Check, Loader2, Wallet as WalletIcon } from 'lucide-react';
+import { X, User, Download, Trash2, LogOut, AlertCircle, Check, Loader2, Wallet as WalletIcon, Shield } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { showSuccess, showError, showLoading, dismissToast } from '../utils/toast';
 import CreateWallet from '../../components/CreateWallet';
@@ -107,73 +107,92 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
         <div className="mb-8">
           <div className="flex items-center space-x-2 text-cyan-400 mb-2">
             <User size={20} />
-            <span className="text-[10px] font-black uppercase tracking-widest">User Protocol</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">System Preferences</span>
           </div>
-          <h2 className="text-2xl font-black text-white">Manage Profile</h2>
+          <h2 className="text-2xl font-black text-white">Profile Control</h2>
         </div>
 
-        <div className="space-y-6">
-          {/* Edit Username */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Username</label>
-            <div className="flex items-center space-x-3 bg-white/5 border border-white/5 rounded-2xl p-1 pr-4">
-              <input 
-                className="bg-transparent text-white outline-none font-bold w-full p-3"
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                disabled={isSavingName}
-              />
+        <div className="space-y-8">
+          {/* SECTION 1: IDENTITY */}
+          <section className="space-y-4">
+            <div className="flex items-center space-x-2 text-slate-500 mb-2">
+              <Shield size={14} className="text-cyan-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Identity Sync</span>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Display Name</label>
+              <div className="flex items-center space-x-3 bg-white/5 border border-white/5 rounded-2xl p-1 pr-4">
+                <input 
+                  className="bg-transparent text-white outline-none font-bold w-full p-3"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  disabled={isSavingName}
+                />
+                <button 
+                  onClick={handleSaveName}
+                  disabled={editingName.trim() === userProfile.name || editingName.trim() === '' || isSavingName}
+                  className="bg-cyan-500/20 text-cyan-400 p-2 rounded-xl hover:bg-cyan-500/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {isSavingName ? <Check size={18} className="animate-pulse" /> : <Check size={18} />}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION 2: FINANCIALS */}
+          <section className="pt-8 border-t border-white/5 space-y-4">
+            <div className="flex items-center space-x-2 text-slate-500 mb-2">
+              <WalletIcon size={14} className="text-orange-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Financial Protocols</span>
+            </div>
+            
+            <div className="space-y-4">
+              <CreateWallet />
+              <Transfer />
+            </div>
+          </section>
+
+          {/* SECTION 3: SYSTEM MAINTENANCE */}
+          <section className="pt-8 border-t border-white/5 space-y-4">
+            <div className="flex items-center space-x-2 text-slate-500 mb-2">
+              <AlertCircle size={14} className="text-slate-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest">System Maintenance</span>
+            </div>
+            
+            <div className="space-y-3">
               <button 
-                onClick={handleSaveName}
-                disabled={editingName.trim() === userProfile.name || editingName.trim() === '' || isSavingName}
-                className="bg-cyan-500/20 text-cyan-400 p-2 rounded-xl hover:bg-cyan-500/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                onClick={handleDownload}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 text-white font-black text-sm flex items-center justify-center space-x-2 hover:bg-white/10 transition-all"
               >
-                {isSavingName ? <Check size={18} className="animate-pulse" /> : <Check size={18} />}
+                <Download size={18} />
+                <span>Archive Data Package</span>
               </button>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  onClick={() => setShowLogoutConfirm(true)}
+                  disabled={isLoggingOut}
+                  className="bg-red-500/10 border border-red-500/20 rounded-2xl py-4 text-red-400 font-black text-sm flex items-center justify-center space-x-2 hover:bg-red-500/20 transition-all disabled:opacity-50"
+                >
+                  {isLoggingOut ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
+                  <span>Sign Out</span>
+                </button>
+
+                <button 
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isDeletingAccount}
+                  className="bg-red-500/20 border border-red-500/30 rounded-2xl py-4 text-red-500 font-black text-sm flex items-center justify-center space-x-2 hover:bg-red-500/30 transition-all disabled:opacity-50"
+                >
+                  {isDeletingAccount ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                  <span>Terminate</span>
+                </button>
+              </div>
             </div>
-          </div>
-
-          {/* Wallet Section */}
-          <div className="pt-4 border-t border-white/5 space-y-4">
-            <div className="flex items-center space-x-2 text-slate-500">
-              <WalletIcon size={16} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Finance nodes</span>
-            </div>
-            <CreateWallet />
-            <Transfer />
-          </div>
-
-          {/* Actions */}
-          <div className="pt-4 border-t border-white/5 space-y-3">
-            <button 
-              onClick={handleDownload}
-              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 text-white font-black text-sm flex items-center justify-center space-x-2 hover:bg-white/10 transition-all"
-            >
-              <Download size={18} />
-              <span>Download My Data</span>
-            </button>
-
-            <button 
-              onClick={() => setShowLogoutConfirm(true)}
-              disabled={isLoggingOut}
-              className="w-full bg-red-500/10 border border-red-500/20 rounded-2xl py-4 text-red-400 font-black text-sm flex items-center justify-center space-x-2 hover:bg-red-500/20 transition-all disabled:opacity-50"
-            >
-              {isLoggingOut ? <Loader2 size={18} className="animate-spin mr-2" /> : <LogOut size={18} />}
-              <span>Log Out</span>
-            </button>
-
-            <button 
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={isDeletingAccount}
-              className="w-full bg-red-500/20 border border-red-500/30 rounded-2xl py-4 text-red-500 font-black text-sm flex items-center justify-center space-x-2 hover:bg-red-500/30 transition-all disabled:opacity-50"
-            >
-              {isDeletingAccount ? <Loader2 size={18} className="animate-spin mr-2" /> : <Trash2 size={18} />}
-              <span>Delete Account</span>
-            </button>
-          </div>
+          </section>
         </div>
 
-        {/* Confirmation Dialogs */}
+        {/* Confirmation Dialogs remain same but with higher z-index to stay above modal content if scrolled */}
         {showLogoutConfirm && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
             <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center">
