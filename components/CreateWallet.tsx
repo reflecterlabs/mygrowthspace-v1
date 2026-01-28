@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { useCreateWallet, useGetWallet, useBalance, ChainToken } from "@chipi-stack/chipi-react";
 import { showSuccess, showError, showLoading, dismissToast } from '../src/utils/toast';
-import { Loader2, Wallet, Copy, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Loader2, Wallet, Copy, RefreshCw, CheckCircle2, Plus } from 'lucide-react';
 
 export default function CreateWallet() {
   const { user } = useUser();
@@ -15,6 +15,7 @@ export default function CreateWallet() {
   const [balance, setBalance] = useState<number | null>(null);
   const [encryptKey, setEncryptKey] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showCreateNew, setShowCreateNew] = useState(false);
 
   const loadWalletInfo = useCallback(async () => {
     if (!user?.id) return;
@@ -53,7 +54,7 @@ export default function CreateWallet() {
       return;
     }
 
-    const toastId = showLoading("Initializing wallet protocol...");
+    const toastId = showLoading("Initializing new wallet protocol...");
     try {
       const token = await getToken();
       if (!token || !user?.id) throw new Error("Authentication failed");
@@ -66,8 +67,9 @@ export default function CreateWallet() {
         bearerToken: token,
       });
       
-      showSuccess("Wallet created successfully!");
+      showSuccess("New wallet created successfully!");
       setEncryptKey("");
+      setShowCreateNew(false);
       await loadWalletInfo(); 
     } catch (error: any) {
       showError(error.message || "Failed to create wallet");
@@ -101,18 +103,29 @@ export default function CreateWallet() {
           <Wallet size={20} />
           <span className="text-[10px] font-black uppercase tracking-widest">Chipi Protocol</span>
         </div>
-        {walletData && (
-          <button 
-            onClick={loadWalletInfo}
-            disabled={isFetchingBalance}
-            className={`text-slate-500 hover:text-cyan-400 transition-colors ${isFetchingBalance ? 'animate-spin' : ''}`}
-          >
-            <RefreshCw size={16} />
-          </button>
-        )}
+        <div className="flex items-center space-x-2">
+          {walletData && !showCreateNew && (
+            <button 
+              onClick={() => setShowCreateNew(true)}
+              className="text-slate-500 hover:text-cyan-400 transition-colors p-1"
+              title="Create new wallet"
+            >
+              <Plus size={16} />
+            </button>
+          )}
+          {walletData && (
+            <button 
+              onClick={loadWalletInfo}
+              disabled={isFetchingBalance}
+              className={`text-slate-500 hover:text-cyan-400 transition-colors p-1 ${isFetchingBalance ? 'animate-spin' : ''}`}
+            >
+              <RefreshCw size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
-      {walletData ? (
+      {walletData && !showCreateNew ? (
         <div className="space-y-6 animate-in fade-in duration-500">
           <div className="bg-black/40 p-6 rounded-3xl border border-white/5 space-y-4">
             <div className="space-y-1">
@@ -123,7 +136,7 @@ export default function CreateWallet() {
             </div>
             
             <div className="space-y-2">
-              <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Wallet Address</p>
+              <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Active Address</p>
               <div 
                 onClick={copyToClipboard}
                 className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5 hover:bg-white/10 transition-all cursor-pointer group"
@@ -135,17 +148,14 @@ export default function CreateWallet() {
               </div>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2 p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl">
-            <CheckCircle2 size={16} className="text-cyan-400" />
-            <p className="text-[10px] font-bold text-cyan-400 uppercase">Wallet Synchronized</p>
-          </div>
         </div>
       ) : (
         <div className="space-y-4 animate-in slide-in-from-bottom-4">
-          <h2 className="text-xl font-black text-white mb-2">Deploy New Wallet</h2>
+          <h2 className="text-xl font-black text-white mb-2">
+            {walletData ? "Deploy New Node" : "Deploy Wallet"}
+          </h2>
           <p className="text-xs text-slate-500 mb-4 leading-relaxed font-medium">
-            Initialize your financial node to enable USDC transfers within the growth space.
+            Initialize a financial node to enable USDC transfers. {walletData && "This will replace the current active link."}
           </p>
           
           <input
@@ -156,14 +166,24 @@ export default function CreateWallet() {
             className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-cyan-500 placeholder:text-slate-600 font-medium"
           />
           
-          <button
-            onClick={handleCreateWallet}
-            disabled={isCreating || !encryptKey}
-            className="w-full bg-cyan-500 text-black rounded-2xl py-4 font-black text-sm flex items-center justify-center space-x-2 hover:bg-cyan-400 transition-all active:scale-95 disabled:opacity-50"
-          >
-            {isCreating ? <Loader2 className="animate-spin" size={18} /> : <Wallet size={18} />}
-            <span>{isCreating ? "Deploying..." : "Initialize Wallet"}</span>
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={handleCreateWallet}
+              disabled={isCreating || !encryptKey}
+              className="flex-1 bg-cyan-500 text-black rounded-2xl py-4 font-black text-sm flex items-center justify-center space-x-2 hover:bg-cyan-400 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isCreating ? <Loader2 className="animate-spin" size={18} /> : <Wallet size={18} />}
+              <span>{isCreating ? "Deploying..." : "Initialize"}</span>
+            </button>
+            {walletData && (
+              <button
+                onClick={() => setShowCreateNew(false)}
+                className="px-6 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-xs uppercase"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
