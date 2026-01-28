@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   User as UserIcon,
   Loader2,
   Zap,
-  RotateCcw, 
-  SendHorizonal, 
+  RotateCcw,
+  SendHorizonal,
 } from 'lucide-react';
-import { useUser, useAuth, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react'; // Corregido: Eliminado UserButton
+import { useUser, useAuth, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react';
 import Onboarding from './components/Onboarding';
 import HabitCard from './components/HabitCard';
 import AddHabitModal from './components/AddHabitModal';
@@ -19,8 +19,8 @@ import { Habit, UserProfile } from './types';
 import { generateSuggestedCards } from './services/geminiService';
 import InsightsPage from './src/pages/InsightsPage';
 import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
-import CreateWallet from './components/CreateWallet'; // Importar el nuevo componente
-import Transfer from './components/Transfer'; // Importar el nuevo componente
+import CreateWallet from './components/CreateWallet';
+import Transfer from './components/Transfer';
 
 // Helper function for streak calculation (moved outside component for reusability)
 const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
@@ -79,7 +79,7 @@ const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: n
         break;
       }
     }
-    
+
     return { streak: currentStreak, lastCompletedDate: streakEndsOnDate };
   }
 
@@ -88,8 +88,8 @@ const calculateStreak = (habit: Habit, allCompletedDates: string[]): { streak: n
 
 
 const App: React.FC = () => {
-  const { isSignedIn, user, isLoaded } = useUser(); // Usar useUser de Clerk
-  const { signOut } = useAuth(); // Corregido: Eliminado getToken
+  const { isSignedIn, isLoaded, getToken, signOut } = useAuth(); // 'user' ya no se desestructura de useAuth
+  const { user } = useUser(); // 'user' se desestructura de useUser
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [profileStatus, setProfileStatus] = useState<'idle' | 'loading' | 'onboarding' | 'ready' | 'error'>('idle');
@@ -103,7 +103,8 @@ const App: React.FC = () => {
   const [editingStatement, setEditingStatement] = useState('');
   const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0); // Nuevo estado para forzar el refresco
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null); // Nuevo estado para el ID de usuario de Supabase (UUID)
 
   // --- Funciones de manejo de datos y eventos ---
 
@@ -128,14 +129,13 @@ const App: React.FC = () => {
   };
 
   const saveHabit = async (habitData: Partial<Habit>) => {
-    if (!habitData.name) return;
-
+    if (!habitData.name || !supabaseUserId) return; // Usar supabaseUserId
     const toastId = showLoading('Deploying protocol...');
     try {
       const { data: existing, error: selectErr } = await supabase
         .from('habits')
         .select('id')
-        .eq('user_id', user?.id)
+        .eq('user_id', supabaseUserId) // Usar supabaseUserId
         .eq('name', habitData.name)
         .maybeSingle();
 
@@ -149,7 +149,7 @@ const App: React.FC = () => {
       }
 
       const { data: newHabitData, error: insertError } = await supabase.from('habits').insert({
-        user_id: user?.id,
+        user_id: supabaseUserId, // Usar supabaseUserId
         name: habitData.name,
         category: habitData.category,
         frequency: habitData.isOneTime ? 'one-time' : (habitData.frequency || 'daily'),
@@ -193,7 +193,7 @@ const App: React.FC = () => {
 
       setSuggestions(prev => prev.filter(s => s.suggestedAction?.payload?.name !== habitData.name));
       setIsModalOpen(false);
-      
+
     } catch (err) {
       showError('An unexpected error occurred while saving the habit.');
       console.error('App: Error saving habit:', err);
@@ -204,13 +204,18 @@ const App: React.FC = () => {
 
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
     console.log("App: Completando onboarding...");
+    if (!supabaseUserId) { // Usar supabaseUserId
+      showError('Authentication error: Supabase user ID not found.');
+      setProfileStatus('error');
+      return;
+    }
     const toastId = showLoading('Activating protocols...');
     try {
       // 1. Fetch the existing profile to get its 'id'
       const { data: existingProfile, error: fetchProfileError } = await supabase
         .from('user_profiles')
         .select('id')
-        .eq('user_id', user?.id)
+        .eq('user_id', supabaseUserId) // Usar supabaseUserId
         .maybeSingle();
 
       if (fetchProfileError) {
@@ -226,12 +231,12 @@ const App: React.FC = () => {
       // 2. Update the existing profile with onboarding data and set has_completed_onboarding to true
       const { error: profileUpdateError } = await supabase.from('user_profiles').update({
         name: newProfile.name,
-        email: user?.emailAddresses[0]?.emailAddress, // Usar email de Clerk
+        email: user?.emailAddresses[0]?.emailAddress,
         identity_statement: newProfile.identityStatement,
         focus_areas: newProfile.focusAreas,
         narrative: newProfile.narrative,
         has_completed_onboarding: true
-      }).eq('id', existingProfile.id);
+      }).eq('user_id', supabaseUserId); // Usar supabaseUserId
 
       if (profileUpdateError) {
         console.error("App: Error al actualizar el perfil en onboarding:", profileUpdateError);
@@ -241,7 +246,7 @@ const App: React.FC = () => {
       // 3. Insert new habits
       if (newHabits.length > 0) {
         const habitsToInsert = newHabits.map(h => ({
-          user_id: user?.id,
+          user_id: supabaseUserId, // Usar supabaseUserId
           name: h.name,
           category: h.category,
           frequency: h.frequency,
@@ -263,7 +268,7 @@ const App: React.FC = () => {
         console.log("App: Hábitos insertados exitosamente durante onboarding:", insertedHabits);
       }
       showSuccess('Onboarding complete! Welcome.');
-      setRefreshTrigger(prev => prev + 1); // Forzar el refresco de datos del usuario
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       showError('Failed to complete onboarding.');
       console.error("App: Error general al guardar datos de onboarding:", error);
@@ -279,10 +284,10 @@ const App: React.FC = () => {
   };
 
   const confirmDeleteHabit = async () => {
-    if (!habitToDelete) return;
+    if (!habitToDelete || !supabaseUserId) return; // Usar supabaseUserId
     const toastId = showLoading('Deleting habit...');
     try {
-      await supabase.from('habits').delete().eq('id', habitToDelete);
+      await supabase.from('habits').delete().eq('id', habitToDelete).eq('user_id', supabaseUserId); // Añadir user_id para RLS
       setHabits(prev => prev.filter(h => h.id !== habitToDelete));
       showSuccess('Habit deleted successfully!');
       setHabitToDelete(null);
@@ -296,12 +301,13 @@ const App: React.FC = () => {
   };
 
   const toggleHabitCompletion = async (habitId: string, date: string) => {
+    if (!supabaseUserId) return; // Usar supabaseUserId
     try {
       const habit = habits.find(h => h.id === habitId);
       if (!habit) return;
 
       const isCompleted = habit.completedDates.includes(date);
-      const updatedDates = isCompleted 
+      const updatedDates = isCompleted
         ? habit.completedDates.filter(d => d !== date)
         : [...habit.completedDates, date];
 
@@ -316,12 +322,13 @@ const App: React.FC = () => {
 
       const { error } = await supabase
         .from('habits')
-        .update({ 
+        .update({
           completed_dates: updatedDates,
           streak: newStreak,
           last_completed_date: newLastCompletedDate
         })
-        .eq('id', habitId);
+        .eq('id', habitId)
+        .eq('user_id', supabaseUserId); // Añadir user_id para RLS
 
       if (error) {
         console.error('App: Error updating habit completion:', error);
@@ -347,12 +354,12 @@ const App: React.FC = () => {
   };
 
   const saveStatement = async () => {
-    if (!editingStatement.trim() || !profile) return;
+    if (!editingStatement.trim() || !profile || !supabaseUserId) return; // Usar supabaseUserId
     const toastId = showLoading('Updating identity statement...');
     try {
       await supabase.from('user_profiles').update({
         identity_statement: editingStatement
-      }).eq('user_id', user?.id);
+      }).eq('user_id', supabaseUserId); // Usar supabaseUserId
       setProfile({ ...profile, identityStatement: editingStatement });
       setIsEditingStatement(false);
       showSuccess('Identity statement updated!');
@@ -365,14 +372,14 @@ const App: React.FC = () => {
   };
 
   const handleUpdateProfileName = async (newName: string) => {
-    if (!user || !profile) {
+    if (!profile || !supabaseUserId) { // Usar supabaseUserId
       throw new Error("User or profile not available.");
     }
     try {
       const { error } = await supabase
         .from('user_profiles')
         .update({ name: newName })
-        .eq('user_id', user.id);
+        .eq('user_id', supabaseUserId); // Usar supabaseUserId
 
       if (error) throw error;
       setProfile(prev => prev ? { ...prev, name: newName } : null);
@@ -438,30 +445,45 @@ const App: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || !user.id) {
-      console.error("App: No user available for deletion.");
+    if (!supabaseUserId) { // Usar supabaseUserId
+      console.error("App: No Supabase user ID available for deletion.");
       throw new Error("Authentication details missing for account deletion.");
     }
 
     const toastId = showLoading('Deleting account...');
     try {
-      // First, delete user data from Supabase
-      const { error: supabaseDeleteError } = await supabase
+      // Primero, eliminar los datos del perfil del usuario de Supabase
+      const { error: supabaseProfileDeleteError } = await supabase
         .from('user_profiles')
         .delete()
-        .eq('user_id', user.id);
+        .eq('user_id', supabaseUserId); // Usar supabaseUserId
 
-      if (supabaseDeleteError) {
-        console.error("App: Error deleting Supabase profile:", supabaseDeleteError);
-        throw supabaseDeleteError;
+      if (supabaseProfileDeleteError) {
+        console.error("App: Error deleting Supabase profile:", supabaseProfileDeleteError);
+        throw supabaseProfileDeleteError;
       }
 
-      // Then, delete the user from Clerk
-      // Clerk's user deletion is typically handled via their dashboard or backend API.
-      // For client-side, we usually just sign out. If a direct client-side delete is needed,
-      // it would involve Clerk's SDK or a custom Clerk webhook/API route.
-      // For now, we'll just sign out after deleting Supabase data.
-      await signOut();
+      // Luego, invocar la función Edge para eliminar el usuario de auth.users
+      const clerkToken = await getToken({ template: 'supabase' }); // Necesitamos el token de Clerk para la función Edge
+      if (!clerkToken) {
+        throw new Error("Clerk token not found for account deletion.");
+      }
+
+      const { data: deleteUserResponse, error: deleteUserFunctionError } = await supabase.functions.invoke('delete-user', {
+        headers: {
+          Authorization: `Bearer ${clerkToken}`,
+        },
+        body: {},
+      });
+
+      if (deleteUserFunctionError) {
+        console.error("App: Error invoking delete-user edge function:", deleteUserFunctionError);
+        throw deleteUserFunctionError;
+      }
+
+      console.log("App: Delete user function response:", deleteUserResponse);
+
+      await signOut(); // Cerrar sesión de Clerk
       showSuccess('Account and data deleted successfully!');
     } catch (error) {
       showError('Failed to delete account.');
@@ -483,8 +505,8 @@ const App: React.FC = () => {
 
   // --- Efectos de React ---
   useEffect(() => {
-    if (!isLoaded) { // Clerk is still loading
-      setProfileStatus('idle'); 
+    if (!isLoaded) {
+      setProfileStatus('idle');
       return;
     }
 
@@ -493,13 +515,46 @@ const App: React.FC = () => {
         console.log("App: Iniciando loadUserData...");
         setProfileStatus('loading');
         try {
-          // Ensure Supabase auth.users entry exists for Clerk user
-          // Clerk handles the auth.users creation via webhooks or direct integration.
-          // We just need to ensure our user_profiles table is in sync.
+          // IMPORTANTE: Configura una plantilla JWT llamada 'supabase' en tu panel de control de Clerk.
+          // Esta plantilla DEBE incluir el UUID del usuario de Supabase en la reclamación 'sub'.
+          // Ejemplo de payload para la plantilla JWT de Clerk:
+          // {
+          //   "sub": "{{user.public_metadata.supabase_user_id}}", // Asumiendo que almacenas el UUID de Supabase en public_metadata de Clerk
+          //   "email": "{{user.email_addresses.0.email_address}}"
+          // }
+          // Necesitarías un webhook o una función backend para poblar `user.public_metadata.supabase_user_id`
+          // cuando un usuario de Clerk se registra por primera vez y se vincula a un usuario de Supabase.
+          const clerkToken = await getToken({ template: 'supabase' });
+          if (!clerkToken) {
+            throw new Error("Clerk token not found. Ensure 'supabase' JWT template is configured in Clerk and returns a valid token.");
+          }
+
+          // Establecer la sesión de Supabase con el token de Clerk
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+            access_token: clerkToken,
+            refresh_token: clerkToken, // Solución: Pasar clerkToken como refresh_token para satisfacer el tipo
+          });
+
+          if (sessionError) {
+            console.error("App: Error setting Supabase session with Clerk token:", sessionError);
+            throw new Error(`Failed to set Supabase session: ${sessionError.message}. Check Clerk JWT template configuration.`);
+          }
+
+          const currentSupabaseUser = sessionData?.user;
+
+          if (!currentSupabaseUser || !currentSupabaseUser.id) {
+            console.error("App: Supabase user or user ID not found after setting session.");
+            setProfileStatus('error');
+            return;
+          }
+
+          setSupabaseUserId(currentSupabaseUser.id); // Almacenar el UUID del usuario de Supabase
+
+          // Ahora usar currentSupabaseUser.id para todas las consultas
           const { data: profileData, error: profileError } = await supabase
             .from('user_profiles')
             .select('*')
-            .eq('user_id', user.id) // Use Clerk's user.id as Supabase user_id
+            .eq('user_id', currentSupabaseUser.id) // Usar el ID de usuario de Supabase (UUID)
             .maybeSingle();
 
           if (profileError) {
@@ -508,7 +563,7 @@ const App: React.FC = () => {
             setProfileStatus('error');
             return;
           }
-          
+
           if (!profileData || profileData.has_completed_onboarding === false) {
             console.log("App: Perfil no encontrado o onboarding incompleto. Mostrando onboarding.");
             setProfile(null);
@@ -525,11 +580,11 @@ const App: React.FC = () => {
               narrative: profileData.narrative
             };
             setProfile(loadedProfile);
-            
+
             const { data: habitsData, error: habitsError } = await supabase
               .from('habits')
               .select('*')
-              .eq('user_id', user.id); // Usar Clerk's user.id
+              .eq('user_id', currentSupabaseUser.id); // Usar el ID de usuario de Supabase (UUID)
 
             if (habitsError) {
               console.error("App: Error al obtener datos de hábitos:", habitsError);
@@ -537,7 +592,7 @@ const App: React.FC = () => {
               setProfileStatus('error');
               return;
             }
-            
+
             console.log("App: Hábitos cargados:", habitsData);
             setHabits((habitsData || []).map(h => ({
               id: h.id,
@@ -560,21 +615,23 @@ const App: React.FC = () => {
         } catch (error) {
           console.error("App: Error general en loadUserData:", error);
           showError('Ocurrió un error inesperado al cargar tus datos.');
-          setProfile(null); 
+          setProfile(null);
           setHabits([]);
           setProfileStatus('error');
+          setSupabaseUserId(null);
         }
       };
       loadUserData();
     } else {
       setProfile(null);
       setHabits([]);
-      setProfileStatus('idle'); 
+      setProfileStatus('idle');
+      setSupabaseUserId(null);
     }
-  }, [isSignedIn, isLoaded, user, refreshTrigger, signOut]);
+  }, [isSignedIn, isLoaded, user, refreshTrigger, getToken, signOut]);
 
   // --- Lógica de renderizado condicional ---
-  if (!isLoaded) { // Clerk está cargando
+  if (!isLoaded) {
     return <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center"><Loader2 className="text-cyan-400 animate-spin" size={40} /></div>;
   }
 
@@ -583,7 +640,7 @@ const App: React.FC = () => {
       <SignedOut>
         <div className="min-h-screen w-full bg-[#0a0a0c] flex flex-col items-center justify-center p-8 relative overflow-hidden">
           <div className="absolute inset-0 opacity-20 bg-gradient-to-tr from-orange-900 to-blue-900 blur-3xl"></div>
-          
+
           <div className="w-full max-w-sm space-y-8 animate-in slide-in-from-bottom-8 relative z-10">
             <div className="text-center">
               <div className="w-16 h-16 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center text-cyan-400 mx-auto mb-6">
@@ -632,8 +689,8 @@ const App: React.FC = () => {
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">My Growth Space</span>
                 <span className="font-black text-[26px] tracking-tighter text-white">{profile?.name || 'Guest'}</span>
               </div>
-              <button 
-                onClick={() => setIsProfileModalOpen(true)} 
+              <button
+                onClick={() => setIsProfileModalOpen(true)}
                 className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center hover:text-cyan-400 transition-all"
               >
                 <UserIcon size={18} />
@@ -655,7 +712,7 @@ const App: React.FC = () => {
                           onChange={(e) => setEditingStatement(e.target.value)}
                           maxLength={264}
                           className="w-full bg-white/5 border border-white/20 rounded-2xl p-4 text-white text-sm outline-none focus:border-cyan-500 resize-none font-medium"
-                          rows={5} 
+                          rows={5}
                           placeholder="Your 264-character identity statement..."
                         />
                         <div className="flex items-center justify-between">
@@ -722,7 +779,7 @@ const App: React.FC = () => {
               {suggestions.length > 0 && (
                 <div className="space-y-4">
                   {suggestions.map((suggestion, idx) => (
-                    <InsightCard 
+                    <InsightCard
                       key={idx}
                       suggestion={suggestion}
                       onAccept={saveHabit}
@@ -737,9 +794,9 @@ const App: React.FC = () => {
                   <div className="pl-4 text-slate-500">
                     {isProcessingAI ? <Loader2 size={20} className="animate-spin" /> : <RotateCcw size={20} />}
                   </div>
-                  <input 
-                    type="text" 
-                    placeholder="Feed protocol data..." 
+                  <input
+                    type="text"
+                    placeholder="Feed protocol data..."
                     className="w-full bg-transparent p-4 outline-none text-white font-medium placeholder:text-slate-600"
                     value={quickLog}
                     onChange={(e) => setQuickLog(e.target.value)}
@@ -751,7 +808,7 @@ const App: React.FC = () => {
               </form>
             </div>
 
-            <BottomNavBar 
+            <BottomNavBar
               currentView={currentView}
               onHomeClick={() => {
                 setCurrentView('home');
