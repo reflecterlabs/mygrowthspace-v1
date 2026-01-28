@@ -1,8 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import {
-  User as UserIcon,
-  Loader2,
-} from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { User as UserIcon, Loader2 } from 'lucide-react';
 import { useUser, useAuth, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react';
 import { jwtDecode } from 'jwt-decode';
 import Onboarding from './components/Onboarding';
@@ -11,7 +8,7 @@ import AddHabitModal from './components/AddHabitModal';
 import DateCarousel from './components/DateCarousel';
 import BottomNavBar from './components/BottomNavBar';
 import UserProfileModal from './src/components/UserProfileModal';
-import { supabase } from './src/integrations/supabase/client';
+import { createClerkSupabaseClient } from './src/lib/supabaseClient'; // Corregido: usando ruta relativa
 import { Habit, UserProfile } from './types';
 import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
 import CreateWallet from './components/CreateWallet';
@@ -20,7 +17,6 @@ import Transfer from './components/Transfer';
 const calculateStreak = (_habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
   const sortedDates = [...allCompletedDates].sort();
   if (sortedDates.length === 0) return { streak: 0, lastCompletedDate: null };
-
   const actualTodayStr = new Date().toISOString().split('T')[0];
   const relevantDates = sortedDates.filter(d => d <= actualTodayStr);
   if (relevantDates.length === 0) return { streak: 0, lastCompletedDate: null };
@@ -28,7 +24,6 @@ const calculateStreak = (_habit: Habit, allCompletedDates: string[]): { streak: 
   let streak = 0;
   let checkDate = new Date();
   checkDate.setHours(0,0,0,0);
-
   const todayStr = checkDate.toISOString().split('T')[0];
   checkDate.setDate(checkDate.getDate() - 1);
   const yesterdayStr = checkDate.toISOString().split('T')[0];
@@ -45,7 +40,6 @@ const calculateStreak = (_habit: Habit, allCompletedDates: string[]): { streak: 
       iterDate.setDate(iterDate.getDate() - 1);
     } else break;
   }
-
   return { streak, lastCompletedDate: relevantDates[relevantDates.length-1] };
 };
 
@@ -60,6 +54,8 @@ const App: React.FC = () => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  const supabase = useMemo(() => createClerkSupabaseClient(getToken), [getToken]);
+
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user) {
       if (isLoaded && !isSignedIn) setProfileStatus('idle');
@@ -69,27 +65,21 @@ const App: React.FC = () => {
     const initSession = async () => {
       setProfileStatus('loading');
       try {
-        const token = await getToken({ template: 'supabase' });
+        const token = await getToken();
         if (!token) {
-          showError("Clerk JWT Template 'supabase' not found.");
+          showError("Could not retrieve session token from Clerk.");
           setProfileStatus('error');
           return;
         }
 
-        // VALIDACIÓN CRÍTICA
         const decoded: any = jwtDecode(token);
-        console.log("DEBUG: Clerk JWT Claims:", decoded);
-        
-        if (decoded.sub === '{{user.id}}') {
-          showError("CRITICAL: Clerk Template is not interpolating variables. Check your Clerk Dashboard.");
+        if (!decoded.sub || decoded.sub.startsWith('{{')) {
+          showError("Invalid session token structure. Check Clerk session config.");
           setProfileStatus('error');
           return;
         }
 
-        await supabase.auth.setSession({ 
-          access_token: token, 
-          refresh_token: token 
-        });
+        await (supabase as any).realtime.setAuth(token);
         
         const { data: profileData, error: pError } = await supabase
           .from('user_profiles')
@@ -116,7 +106,7 @@ const App: React.FC = () => {
           });
 
           const { data: habitsData } = await supabase.from('habits').select('*').eq('user_id', user.id);
-          setHabits((habitsData || []).map(h => ({
+          setHabits((habitsData || []).map((h: any) => ({ 
             id: h.id,
             name: h.name,
             category: h.category,
@@ -139,17 +129,12 @@ const App: React.FC = () => {
     };
 
     initSession();
-  }, [isLoaded, isSignedIn, user, refreshTrigger, getToken]);
+  }, [isLoaded, isSignedIn, user, refreshTrigger, getToken, supabase]);
 
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
     if (!user) return;
     const toastId = showLoading('Activating protocols...');
     try {
-      const token = await getToken({ template: 'supabase' });
-      if (token) {
-        await supabase.auth.setSession({ access_token: token, refresh_token: token });
-      }
-
       const { error: pErr } = await supabase.from('user_profiles').upsert({
         id: user.id, 
         name: newProfile.name,
@@ -158,7 +143,7 @@ const App: React.FC = () => {
         focus_areas: newProfile.focusAreas,
         narrative: newProfile.narrative,
         has_completed_onboarding: true
-      }, { onConflict: 'id' });
+      });
       
       if (pErr) throw pErr;
 
@@ -172,7 +157,6 @@ const App: React.FC = () => {
           time_of_day: h.time,
           is_one_time: h.isOneTime
         }));
-        
         const { error: hErr } = await supabase.from('habits').insert(habitsToInsert);
         if (hErr) throw hErr;
       }
@@ -188,13 +172,10 @@ const App: React.FC = () => {
   const toggleHabit = async (habitId: string, date: string) => {
     const habit = habits.find(h => h.id === habitId);
     if (!habit || !user) return;
-
     const isDone = habit.completedDates.includes(date);
     const newDates = isDone ? habit.completedDates.filter(d => d !== date) : [...habit.completedDates, date];
     const { streak, lastCompletedDate } = calculateStreak(habit, newDates);
-
     setHabits(prev => prev.map(h => h.id === habitId ? { ...h, completedDates: newDates, streak, lastCompletedDate } : h));
-
     await supabase.from('habits').update({
       completed_dates: newDates,
       streak,
