@@ -123,6 +123,12 @@ const App: React.FC = () => {
     if (!user) return;
     const toastId = showLoading('Activating protocols...');
     try {
+      // Sincronizar sesión antes de la operación para evitar 401
+      const token = await getToken({ template: 'supabase' });
+      if (token) {
+        await supabase.auth.setSession({ access_token: token, refresh_token: token });
+      }
+
       const { error: pErr } = await supabase.from('user_profiles').upsert({
         id: user.id,
         name: newProfile.name,
@@ -153,6 +159,7 @@ const App: React.FC = () => {
     } finally { dismissToast(toastId); }
   };
 
+  // ... (resto del componente sin cambios)
   const toggleHabit = async (habitId: string, date: string) => {
     const habit = habits.find(h => h.id === habitId);
     if (!habit || !user) return;
