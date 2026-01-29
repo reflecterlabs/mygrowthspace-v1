@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { User as UserIcon, Loader2, AlertCircle } from 'lucide-react';
+import { User as UserIcon, Loader2, AlertCircle, MessageSquare } from 'lucide-react';
 import { useUser, useAuth, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react';
 import { dark } from '@clerk/themes';
 import Onboarding from './components/Onboarding';
@@ -14,6 +14,7 @@ import ManifestHeader from './src/components/ManifestHeader';
 import CategoryFilter from './src/components/CategoryFilter';
 import InsightCard from './components/InsightCard';
 import DailyRecommendation from './src/components/DailyRecommendation';
+import FeedbackBubble from './src/components/FeedbackBubble';
 import InsightsPage from './src/pages/InsightsPage';
 import { createClerkSupabaseClient } from './src/lib/supabaseClient';
 import { Habit, UserProfile, SuggestedCard, MotivationTip } from './types';
@@ -61,6 +62,7 @@ const App: React.FC = () => {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<SuggestedCard[]>([]);
@@ -178,7 +180,6 @@ const App: React.FC = () => {
     
     setProfile(prev => {
       const newProfile = prev ? { ...prev, ...updates } : null;
-      // If language changed, clear and re-fetch recommendation
       if (updates.language && updates.language !== prev?.language && newProfile) {
         setDailyRecommendation(null);
         fetchDailyRecommendation(newProfile.focusAreas, updates.language);
@@ -345,6 +346,20 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSendFeedback = async (content: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase.from('feedback').insert({
+        user_id: user.id,
+        content
+      });
+      if (error) throw error;
+      showSuccess("Feedback enviado, ¡gracias!");
+    } catch (e) {
+      showError("No se pudo enviar el feedback");
+    }
+  };
+
   const filteredHabits = habits.filter(h => {
     const isCorrectCategory = selectedCategory === 'All' || h.category === selectedCategory;
     const isStarted = h.startDate ? selectedDate >= h.startDate : true;
@@ -391,7 +406,22 @@ const App: React.FC = () => {
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('appName')}</p>
                 <h2 className="text-2xl font-black tracking-tight">{profile?.name}</h2>
               </div>
-              <button onClick={() => setIsProfileModalOpen(true)} className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors"><UserIcon size={20} className="text-primary-500" /></button>
+              <div className="flex items-center gap-3 relative">
+                <button 
+                  onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}
+                  className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors text-slate-400 hover:text-primary-500"
+                >
+                  <MessageSquare size={20} />
+                </button>
+                <button onClick={() => setIsProfileModalOpen(true)} className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors"><UserIcon size={20} className="text-primary-500" /></button>
+                
+                <FeedbackBubble 
+                  isOpen={isFeedbackOpen} 
+                  onClose={() => setIsFeedbackOpen(false)} 
+                  onSubmit={handleSendFeedback}
+                  language={profile?.language}
+                />
+              </div>
             </nav>
 
             {currentView === 'home' ? (
