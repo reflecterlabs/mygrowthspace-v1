@@ -76,14 +76,12 @@ A comprehensive personal growth platform powered by Google Gemini AI, designed t
    - Local: http://localhost:5173
    - Production: https://mygrowth.space/
 
-## 📊 Observability & Metrics
+## 📊 Observability & Metrics 📊
 
-### Sentry
 - Tracks JavaScript errors and exceptions
 - Records breadcrumbs for user actions
 - Monitors API failures and performance issues
 
-### Amplitude
 - Event tracking for user engagement (feedback submission, habit creation, etc.)
 - Session analytics
 - User behavior segmentation
