@@ -13,11 +13,12 @@ import RoutineInput from './src/components/RoutineInput';
 import ManifestHeader from './src/components/ManifestHeader';
 import CategoryFilter from './src/components/CategoryFilter';
 import InsightCard from './components/InsightCard';
+import DailyRecommendation from './src/components/DailyRecommendation';
 import InsightsPage from './src/pages/InsightsPage';
 import { createClerkSupabaseClient } from './src/lib/supabaseClient';
-import { Habit, UserProfile, SuggestedCard } from './types';
+import { Habit, UserProfile, SuggestedCard, MotivationTip } from './types';
 import { showSuccess, showError, showLoading, dismissToast } from './src/utils/toast';
-import { generateSuggestedCards } from './services/geminiService';
+import { generateSuggestedCards, getDailyInspiration } from './services/geminiService';
 import { getTranslation } from './src/lib/translations';
 
 const calculateStreak = (_habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
@@ -63,6 +64,8 @@ const App: React.FC = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<SuggestedCard[]>([]);
+  const [dailyRecommendation, setDailyRecommendation] = useState<MotivationTip | null>(null);
+  const [showDailyRecommendation, setShowDailyRecommendation] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'insights'>('home');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
@@ -134,6 +137,14 @@ const App: React.FC = () => {
             lastCompletedDate: h.last_completed_date
           })));
           setProfileStatus('ready');
+
+          // Fetch daily recommendation once per app entry
+          if (!dailyRecommendation) {
+            const focus = profileData.focus_areas?.join(', ') || 'personal growth';
+            const tip = await getDailyInspiration(focus);
+            setDailyRecommendation(tip);
+            setShowDailyRecommendation(true);
+          }
         }
       } catch (e) {
         console.error("Session init error:", e);
@@ -368,6 +379,15 @@ const App: React.FC = () => {
             {currentView === 'home' ? (
               <main className="p-6 space-y-4 animate-in fade-in duration-500">
                 <ManifestHeader statement={profile?.identityStatement || ''} onUpdate={handleUpdateIdentity} language={profile?.language} />
+                
+                {showDailyRecommendation && dailyRecommendation && (
+                  <DailyRecommendation 
+                    recommendation={dailyRecommendation} 
+                    onDismiss={() => setShowDailyRecommendation(false)} 
+                    language={profile?.language}
+                  />
+                )}
+
                 <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
                 <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} language={profile?.language} />
                 

@@ -86,7 +86,10 @@ export const translations = {
     toastInsightsGenerated: "New insights generated",
     toastRoutineAnalyzed: "Routine analyzed",
     toastSavingVisuals: "Saving protocol visuals...",
-    toastVisualsRecalibrated: "Visual system recalibrated."
+    toastVisualsRecalibrated: "Visual system recalibrated.",
+    recommendationTitle: "Daily Calibration",
+    recommendationAction: "Apply Strategy",
+    recommendationDismiss: "Acknowledged"
   },
   es: {
     appName: "Mi Espacio de Crecimiento",
@@ -175,7 +178,10 @@ export const translations = {
     toastInsightsGenerated: "Nuevos insights generados",
     toastRoutineAnalyzed: "Rutina analizada",
     toastSavingVisuals: "Guardando visuales del protocolo...",
-    toastVisualsRecalibrated: "Sistema visual recalibrado."
+    toastVisualsRecalibrated: "Sistema visual recalibrado.",
+    recommendationTitle: "Calibración Diaria",
+    recommendationAction: "Aplicar Estrategia",
+    recommendationDismiss: "Entendido"
   },
   pt: {
     appName: "Meu Espaço de Crescimento",
@@ -219,7 +225,7 @@ export const translations = {
     insightsNodes: "NÓS",
     insightsAwaiting: "Aguardando dados para este vetor...",
     habitStreak: "SEQUÊNCIA",
-    habitProtocolActive: "PROTOCOLO ATIVO",
+    habitProtocolActive: "PROTOCOLO ACTIVO",
     modalNewNode: "Novo Nó",
     modalEditNode: "Editar Nó",
     modalInitialize: "Inicializar Protocolo",
@@ -228,7 +234,7 @@ export const translations = {
     modalCategory: "Categoria de Vetor",
     modalSyncTime: "Tempo de Sincronização",
     modalDeploy: "Implantar Protocolo",
-    modalUpdate: "Atualizar Protocolo",
+    modalUpdate: "Actualizar Protocolo",
     routinePlaceholder: "Descreva novos hábitos e modificações",
     deleteHabitTitle: "Encerrar Protocolo?",
     deleteHabitDesc: "Isso excluirá o hábito e todas as suas instâncias da sua agenda.",
@@ -264,7 +270,10 @@ export const translations = {
     toastInsightsGenerated: "Novos insights gerados",
     toastRoutineAnalyzed: "Rotina analisada",
     toastSavingVisuals: "Salvando visuais do protocolo...",
-    toastVisualsRecalibrated: "Sistema visual recalibrado."
+    toastVisualsRecalibrated: "Sistema visual recalibrado.",
+    recommendationTitle: "Calibração Diária",
+    recommendationAction: "Aplicar Estratégia",
+    recommendationDismiss: "Entendido"
   },
   ru: {
     appName: "Мое Пространство Роста",
@@ -353,7 +362,10 @@ export const translations = {
     toastInsightsGenerated: "Сгенерированы новые инсайты",
     toastRoutineAnalyzed: "Рутина проанализирована",
     toastSavingVisuals: "Сохранение визуальных настроек...",
-    toastVisualsRecalibrated: "Визуальная система перекалибрована."
+    toastVisualsRecalibrated: "Визуальная система перекалибрована.",
+    recommendationTitle: "Дневная Калибровка",
+    recommendationAction: "Применить Стратегию",
+    recommendationDismiss: "Понятно"
   },
   hi: {
     appName: "माय ग्रोथ स्पेस",
@@ -442,7 +454,10 @@ export const translations = {
     toastInsightsGenerated: "नई अंतर्दृष्टि उत्पन्न हुई",
     toastRoutineAnalyzed: "रूटीन का विश्लेषण किया गया",
     toastSavingVisuals: "विजुअल सेटिंग्स सहेजी जा रही हैं...",
-    toastVisualsRecalibrated: "विजुअल सिस्टम पुन: कैलिब्रेट किया गया।"
+    toastVisualsRecalibrated: "विजुअल सिस्टम पुन: कैलिब्रेट किया गया।",
+    recommendationTitle: "दैनिक अंशांकन",
+    recommendationAction: "रणनीति लागू करें",
+    recommendationDismiss: "समझ गया"
   },
   zh: {
     appName: "我的成长空间",
@@ -531,7 +546,10 @@ export const translations = {
     toastInsightsGenerated: "生成了新见解",
     toastRoutineAnalyzed: "常规已分析",
     toastSavingVisuals: "正在保存视觉设置...",
-    toastVisualsRecalibrated: "视觉系统已重新校准。"
+    toastVisualsRecalibrated: "视觉系统已重新校准。",
+    recommendationTitle: "每日校准",
+    recommendationAction: "应用策略",
+    recommendationDismiss: "已阅"
   }
 };
 
