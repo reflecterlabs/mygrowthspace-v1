@@ -90,8 +90,8 @@ const App: React.FC = () => {
 
   const supabase = useMemo(() => createClerkSupabaseClient(getToken), [getToken]);
 
-  const browserLang = navigator.language.split('-')[0];
-  const currentLanguage = profile?.language || browserLang;
+  const defaultLang = 'en';
+  const currentLanguage = profile?.language || defaultLang;
   const t = (key: any) => getTranslation(currentLanguage, key);
 
   const fetchDailyRecommendation = async (focusAreas: string[], lang: string) => {
@@ -131,7 +131,7 @@ const App: React.FC = () => {
         if (!profileData || !profileData.has_completed_onboarding) {
           setProfileStatus('onboarding');
         } else {
-          const userLang = profileData.language || browserLang;
+          const userLang = profileData.language || defaultLang;
           const currentProfile: UserProfile = {
             name: profileData.name,
             email: profileData.email,
@@ -174,7 +174,7 @@ const App: React.FC = () => {
     };
 
     initSession();
-  }, [isLoaded, isSignedIn, user, refreshTrigger, getToken, supabase, browserLang]);
+  }, [isLoaded, isSignedIn, user, refreshTrigger, getToken, supabase]);
 
   const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return;
@@ -201,7 +201,7 @@ const App: React.FC = () => {
     const toastId = showLoading(t('toastActivatingProtocols'));
     const todayStr = getTodayLocalStr();
     try {
-      const finalLang = newProfile.language || browserLang;
+      const finalLang = newProfile.language || defaultLang;
       await supabase.from('user_profiles').upsert({
         id: user.id, 
         name: newProfile.name,
@@ -220,9 +220,9 @@ const App: React.FC = () => {
           name: h.name,
           category: h.category,
           frequency: h.frequency,
-          days_of_week: h.daysOfWeek,
+          days_of_week: h.days_of_week,
           time_of_day: h.time,
-          is_one_time: h.isOneTime,
+          is_one_time: h.is_one_time,
           start_date: todayStr
         }));
         await supabase.from('habits').insert(habitsToInsert);
@@ -275,10 +275,10 @@ const App: React.FC = () => {
       name: data.name,
       category: data.category,
       frequency: data.frequency || 'daily',
-      days_of_week: data.daysOfWeek || [0,1,2,3,4,5,6],
+      days_of_week: data.days_of_week || [0,1,2,3,4,5,6],
       time_of_day: data.time,
-      is_one_time: data.isOneTime || false,
-      specific_dates: data.specificDates || [],
+      is_one_time: data.is_one_time || false,
+      specific_dates: data.specific_dates || [],
       start_date: todayStr
     }).select().single();
 

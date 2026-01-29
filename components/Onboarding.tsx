@@ -35,9 +35,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   });
   const [suggestedHabits, setSuggestedHabits] = useState<Partial<Habit>[]>([]);
 
-  // Use browser language as initial guess for translations
-  const browserLang = navigator.language.split('-')[0];
-  const t = (key: any) => getTranslation(profile.language || browserLang, key);
+  const defaultLang = 'en';
+  const t = (key: any) => getTranslation(profile.language || defaultLang, key);
 
   const handleNext = () => setStep(s => s + 1);
 
@@ -59,7 +58,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       setProfile(prev => ({ 
         ...prev, 
         identityStatement: result.identity,
-        language: result.detectedLanguage || prev.language || browserLang 
+        language: result.detectedLanguage || prev.language || defaultLang 
       }));
       setStep(4);
     } catch (e) { console.error(e); } finally { setLoading(false); }
