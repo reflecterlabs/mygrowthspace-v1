@@ -15,24 +15,26 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory, onSel
   const t = (key: any) => getTranslation(language, key);
 
   return (
-    /* py-8 proporciona espacio de sobra para la sombra y la escala. 
-       -my-4 compensa ese espacio para que el diseño no se vea demasiado separado. */
-    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-8 -my-4 px-1 snap-x snap-mandatory scroll-smooth outline-none">
-      {CATEGORIES.map(cat => (
-        <button
-          key={cat}
-          onClick={() => onSelect(cat)}
-          className={`flex-shrink-0 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 snap-start ${
-            selectedCategory === cat 
-              ? 'bg-primary-500 text-black shadow-[0_10px_30px_-5px_var(--primary-color)] scale-110 z-10' 
-              : 'bg-white/5 text-slate-500 border border-white/5 hover:text-white hover:bg-white/10'
-          }`}
-        >
-          {t(cat.toLowerCase() as any)}
-        </button>
-      ))}
-      {/* Espaciador para asegurar que el último elemento no se pegue al borde derecho al scrollear */}
-      <div className="flex-shrink-0 w-8" aria-hidden="true" />
+    <div className="w-full py-2">
+      {/* 
+        - Grid de 3 columnas en móviles (grid-cols-3)
+        - Flex scroll en pantallas medianas en adelante (sm:flex)
+      */}
+      <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-nowrap sm:overflow-x-auto sm:no-scrollbar sm:gap-3 outline-none">
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat}
+            onClick={() => onSelect(cat)}
+            className={`px-2 py-3 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 sm:flex-shrink-0 ${
+              selectedCategory === cat 
+                ? 'bg-primary-500 text-black shadow-lg shadow-primary-500/20 scale-[1.02] sm:scale-110 z-10' 
+                : 'bg-white/5 text-slate-500 border border-white/5 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            {t(cat.toLowerCase() as any)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
