@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 // @ts-ignore
 import { GoogleGenAI, Type } from "https://esm.sh/@google/genai@1.38.0";
+import { Opik } from "https://esm.sh/opik@0.1.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,26 +11,52 @@ const corsHeaders = {
 
 const ALLOWED_CATEGORIES = ['Health', 'Mindset', 'Productivity', 'Finance', 'Social'];
 
-const getLanguageName = (code: string) => {
-  const langs: Record<string, string> = {
-    'es': 'Spanish',
-    'en': 'English',
-    'pt': 'Portuguese',
-    'ru': 'Russian',
-    'hi': 'Hindi',
-    'zh': 'Chinese'
-  };
-  return langs[code] || 'English';
-};
+// Inicializar Opik para rastrear llamadas a Gemini
+function getOpikClient() {
+  const apiKey = Deno.env.get('OPIK_API_KEY');
+  const projectName = Deno.env.get('OPIK_PROJECT_NAME');
+  const workspaceName = Deno.env.get('OPIK_WORKSPACE_NAME');
+  const urlOverride = Deno.env.get('OPIK_URL_OVERRIDE');
+
+  if (apiKey && projectName && workspaceName) {
+    return new Opik({
+      apiKey,
+      apiUrl: urlOverride || 'https://www.comet.com/opik/api',
+      projectName,
+      workspaceName,
+    });
+  }
+  return null;
+}
 
 serve(async (req: any) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const opik = getOpikClient();
+  let trace: any = null;
+  const startTime = Date.now();
+
   try {
     const { action, payload } = await req.json();
     console.log("[gemini-proxy] Received action:", action);
+
+    // Crear traza en Opik para esta llamada a Gemini
+    if (opik) {
+      trace = opik.trace({
+        name: `Gemini: ${action}`,
+        input: {
+          action,
+          language: payload.language || 'en',
+          // No incluyas datos sensibles completos, solo metadatos
+          hasUserFocus: !!payload.userFocus,
+          hasHabits: !!payload.habits,
+          narrativeLength: payload.narrative ? payload.narrative.length : 0,
+          logTextLength: payload.logText ? payload.logText.length : 0,
+        },
+      });
+    }
 
     // @ts-ignore
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -175,12 +202,43 @@ serve(async (req: any) => {
         return new Response("Unknown action", { status: 400, headers: corsHeaders });
     }
 
+    // Registrar resultado exitoso en Opik
+    const latency = Date.now() - startTime;
+    if (trace) {
+      trace.output = {
+        status: 'success',
+        action,
+        latencyMs: latency,
+        resultType: Array.isArray(result) ? 'array' : typeof result,
+      };
+      trace.end();
+      await opik.flush(); // Enviar trazas a Opik
+    }
+
+    console.log(`[gemini-proxy] Action '${action}' completed in ${latency}ms`);
+
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (error) {
+    // Registrar error en Opik
+    const latency = Date.now() - startTime;
+    if (trace) {
+      trace.output = {
+        status: 'error',
+        error: error instanceof Error ? error.message : String(error),
+        latencyMs: latency,
+      };
+      trace.end();
+      const opik = getOpikClient();
+      if (opik) {
+        await opik.flush();
+      }
+    }
+
+    console.error("[gemini-proxy-error]", error);
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { initAnalytics } from './src/analytics';
 import { User as UserIcon, Loader2, AlertCircle, MessageSquare } from 'lucide-react';
 import { useUser, useAuth, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react';
 import { dark } from '@clerk/themes';
@@ -62,6 +63,9 @@ const calculateStreak = (_habit: Habit, allCompletedDates: string[]): { streak: 
   }
   return { streak, lastCompletedDate: relevantDates[relevantDates.length-1] };
 };
+
+// Inicializar analíticas al cargar el módulo principal
+initAnalytics();
 
 const App: React.FC = () => {
   const { isSignedIn, isLoaded, getToken, signOut } = useAuth();

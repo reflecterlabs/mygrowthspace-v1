@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import * as Sentry from '@sentry/react';
+import { trackEvent } from '../analytics';
 import { Send, X, MessageSquare } from 'lucide-react';
 
 interface FeedbackBubbleProps {
@@ -30,10 +32,28 @@ const FeedbackBubble: React.FC<FeedbackBubbleProps> = ({ isOpen, onClose, onSubm
   const handleSubmit = async () => {
     if (!text.trim() || isSubmitting) return;
     setIsSubmitting(true);
-    await onSubmit(text);
-    setText('');
-    setIsSubmitting(false);
-    onClose();
+
+    // Trackear evento en Amplitude
+    trackEvent('feedback_submitted', { textLength: text.length, language });
+
+    try {
+      await onSubmit(text);
+      // --- Sentry (breadcrumb de éxito) ---
+      Sentry.addBreadcrumb({
+        category: 'feedback',
+        message: 'Feedback enviado correctamente',
+        level: 'info',
+        data: { textLength: text.length, language },
+      });
+    } catch (error) {
+      // --- Sentry (error) ---
+      Sentry.captureException(error);
+      throw error;
+    } finally {
+      setText('');
+      setIsSubmitting(false);
+      onClose();
+    }
   };
 
   if (!isOpen) return null;
