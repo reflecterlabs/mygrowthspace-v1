@@ -15,21 +15,24 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ selectedCategory, onSel
   const t = (key: any) => getTranslation(language, key);
 
   return (
-    <div className="w-full py-2">
+    <div className="w-full flex justify-center py-2">
       {/* 
-        - Grid de 3 columnas en móviles (grid-cols-3)
-        - Flex scroll en pantallas medianas en adelante (sm:flex)
+        flex-wrap: permite que los botones bajen a la siguiente fila en pantallas pequeñas.
+        justify-center: mantiene los botones centrados en cualquier resolución.
       */}
-      <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-nowrap sm:overflow-x-auto sm:no-scrollbar sm:gap-3 outline-none">
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-full">
         {CATEGORIES.map(cat => (
           <button
             key={cat}
             onClick={() => onSelect(cat)}
-            className={`px-2 py-3 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 sm:flex-shrink-0 ${
-              selectedCategory === cat 
-                ? 'bg-primary-500 text-black shadow-lg shadow-primary-500/20 scale-[1.02] sm:scale-110 z-10' 
-                : 'bg-white/5 text-slate-500 border border-white/5 hover:text-white hover:bg-white/10'
-            }`}
+            className={`
+              px-4 py-2.5 rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest 
+              transition-all duration-300 border
+              ${selectedCategory === cat 
+                ? 'bg-primary-500 text-black border-primary-500 shadow-[0_0_15px_rgba(6,182,212,0.3)] scale-[1.05]' 
+                : 'bg-white/5 text-slate-500 border-white/5 hover:border-white/20 hover:text-slate-300'
+              }
+            `}
           >
             {t(cat.toLowerCase() as any)}
           </button>
