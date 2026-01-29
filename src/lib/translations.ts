@@ -42,6 +42,7 @@ export const translations = {
     insightsAwaiting: "Awaiting data population for this vector...",
     habitStreak: "STREAK",
     habitProtocolActive: "PROTOCOL ACTIVE",
+    habitPastLocked: "Past days are locked. Consistency is built day by day!",
     modalNewNode: "New Node",
     modalEditNode: "Edit Node",
     modalInitialize: "Initialize Protocol",
@@ -134,6 +135,7 @@ export const translations = {
     insightsAwaiting: "Esperando población de datos para este vector...",
     habitStreak: "RACHA",
     habitProtocolActive: "PROTOCOLO ACTIVO",
+    habitPastLocked: "Los días pasados están cerrados. ¡La constancia se construye día a día!",
     modalNewNode: "Nuevo Nodo",
     modalEditNode: "Editar Nodo",
     modalInitialize: "Inicializar Protocolo",
@@ -199,7 +201,7 @@ export const translations = {
     onboardingAddNode: "Adicionar Nó Personalizado",
     onboardingWelcome: "Bem-vindo ao Meu Espaço de Crescimento",
     onboardingIdentityMapping: "Mapeamento de Identidade",
-    onboardingPatternRecognition: "Reconhecimento de Padrões",
+    onboardingPatternRecognition: "Reconocimiento de Padrões",
     onboardingSystemOperator: "Operador do Sistema",
     onboardingNeuralExample: "Exemplo: Eu treino todas as manhãs. Medito às 18h...",
     onboardingIdentitySync: "Sincronização de Identidade",
@@ -226,6 +228,7 @@ export const translations = {
     insightsAwaiting: "Aguardando dados para este vetor...",
     habitStreak: "SEQUÊNCIA",
     habitProtocolActive: "PROTOCOLO ACTIVO",
+    habitPastLocked: "Os dias passados estão bloqueados. A consistência é construída dia após dia!",
     modalNewNode: "Novo Nó",
     modalEditNode: "Editar Nó",
     modalInitialize: "Inicializar Protocolo",
@@ -267,12 +270,12 @@ export const translations = {
     toastHabitDeployed: "Hábito implantado",
     toastProtocolUpdated: "Protocolo atualizado",
     toastNeuralProcessing: "Processamento neural...",
-    toastInsightsGenerated: "Novos insights gerados",
+    toastInsightsGenerated: "Novos insights generados",
     toastRoutineAnalyzed: "Rotina analisada",
     toastSavingVisuals: "Salvando visuais do protocolo...",
     toastVisualsRecalibrated: "Sistema visual recalibrado.",
-    recommendationTitle: "Calibração Diária",
-    recommendationAction: "Aplicar Estratégia",
+    recommendationTitle: "Calibração Diaria",
+    recommendationAction: "Aplicar Estrategia",
     recommendationDismiss: "Entendido"
   },
   ru: {
@@ -318,6 +321,7 @@ export const translations = {
     insightsAwaiting: "Ожидание данных для этого вектора...",
     habitStreak: "СЕРИЯ",
     habitProtocolActive: "ПРОТОКОЛ АКТИВЕН",
+    habitPastLocked: "Прошлые дни заблокированы. Постоянство строится день за днем!",
     modalNewNode: "Новый Узел",
     modalEditNode: "Изменить Узел",
     modalInitialize: "Инициализировать Протокол",
@@ -400,7 +404,7 @@ export const translations = {
     settingsArchive: "डेटा संग्रह करें",
     settingsSignOut: "साइन आउट",
     settingsTerminate: "खाता हटाएं",
-    settingsTheme: "थीम कॉन्फ़िगरेशन लागू करें",
+    settingsTheme: "थीM कॉन्फ़िगरेशन लागू करें",
     settingsSelectColor: "अपना रंग चुनें",
     settingsConfirmLogout: "लॉगआउट की पुष्टि करें",
     settingsIrreversible: "यह कार्रवाई अपरिवर्तनीय है।",
@@ -410,6 +414,7 @@ export const translations = {
     insightsAwaiting: "इस वेक्टर के लिए डेटा की प्रतीक्षा है...",
     habitStreak: "लगातार दिन",
     habitProtocolActive: "प्रोटोकॉल सक्रिय",
+    habitPastLocked: "पिछले दिन लॉक हैं। निरंतरता दिन-ब-दिन बनती है!",
     modalNewNode: "नया नोड",
     modalEditNode: "नोड संपादित करें",
     modalInitialize: "प्रोटोकॉल शुरू करें",
@@ -502,6 +507,7 @@ export const translations = {
     insightsAwaiting: "等待此领域的数据填充...",
     habitStreak: "连续天数",
     habitProtocolActive: "协议激活",
+    habitPastLocked: "过往日期已锁定。坚持是日复一日积累的！",
     modalNewNode: "新节点",
     modalEditNode: "编辑节点",
     modalInitialize: "初始化协议",
@@ -557,8 +563,6 @@ export type LanguageCode = keyof typeof translations;
 
 export const getTranslation = (lang: string | undefined, key: keyof typeof translations['en']) => {
   const code = (lang || 'en') as LanguageCode;
-  if (!translations[code]) {
-    return translations['en'][key];
-  }
-  return translations[code][key] || translations['en'][key];
+  const translationSet = translations[code] || translations['en'];
+  return (translationSet as any)[key] || (translations['en'] as any)[key];
 };

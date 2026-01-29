@@ -240,7 +240,7 @@ const App: React.FC = () => {
     
     // Comparación basada en fecha local sin horas
     if (date < todayStr) {
-      showError("Consistency is maintained in the present. Past logs are locked.");
+      showError(t('habitPastLocked'));
       return;
     }
 
