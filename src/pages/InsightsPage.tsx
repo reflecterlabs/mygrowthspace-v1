@@ -48,7 +48,7 @@ const InsightsPage: React.FC<InsightsPageProps> = ({ habits, language = 'en' }) 
         </div>
       </div>
 
-      <div className="sticky top-20 z-20 pt-2 pb-0 bg-[#0a0a0c]/90 backdrop-blur-md -mx-6 px-6">
+      <div className="sticky top-20 z-20 pt-2 pb-0 bg-[#0a0a0c]/90 backdrop-blur-md -mx-6 px-6 overflow-visible">
         <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} language={language} />
       </div>
 
