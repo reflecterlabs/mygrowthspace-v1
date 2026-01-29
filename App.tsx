@@ -74,6 +74,18 @@ const App: React.FC = () => {
 
   const t = (key: any) => getTranslation(profile?.language, key);
 
+  // Fetch recommendation logic
+  const fetchDailyRecommendation = async (focusAreas: string[], lang: string) => {
+    const focus = focusAreas?.join(', ') || 'personal growth';
+    try {
+      const tip = await getDailyInspiration(focus, lang);
+      setDailyRecommendation(tip);
+      setShowDailyRecommendation(true);
+    } catch (e) {
+      console.error("Failed to fetch recommendation", e);
+    }
+  };
+
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user) {
       if (isLoaded && !isSignedIn) setProfileStatus('idle');
@@ -107,7 +119,7 @@ const App: React.FC = () => {
         if (!profileData || !profileData.has_completed_onboarding) {
           setProfileStatus('onboarding');
         } else {
-          setProfile({
+          const currentProfile: UserProfile = {
             name: profileData.name,
             email: profileData.email,
             isPremium: profileData.is_premium,
@@ -116,7 +128,8 @@ const App: React.FC = () => {
             narrative: profileData.narrative,
             themeColor: profileData.theme_color || '#06b6d4',
             language: profileData.language || 'en'
-          });
+          };
+          setProfile(currentProfile);
 
           document.documentElement.style.setProperty('--primary-color', profileData.theme_color || '#06b6d4');
 
@@ -138,12 +151,9 @@ const App: React.FC = () => {
           })));
           setProfileStatus('ready');
 
-          // Fetch daily recommendation once per app entry with user language
+          // Initial fetch for recommendation
           if (!dailyRecommendation) {
-            const focus = profileData.focus_areas?.join(', ') || 'personal growth';
-            const tip = await getDailyInspiration(focus, profileData.language || 'en');
-            setDailyRecommendation(tip);
-            setShowDailyRecommendation(true);
+            fetchDailyRecommendation(currentProfile.focusAreas, currentProfile.language || 'en');
           }
         }
       } catch (e) {
@@ -154,6 +164,28 @@ const App: React.FC = () => {
 
     initSession();
   }, [isLoaded, isSignedIn, user, refreshTrigger, getToken, supabase]);
+
+  const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
+    if (!user) return;
+    const dbUpdates: any = {};
+    if (updates.name) dbUpdates.name = updates.name;
+    if (updates.themeColor) dbUpdates.theme_color = updates.themeColor;
+    if (updates.language) dbUpdates.language = updates.language;
+    if (updates.identityStatement) dbUpdates.identity_statement = updates.identityStatement;
+    
+    const { error } = await supabase.from('user_profiles').update(dbUpdates).eq('id', user.id);
+    if (error) throw error;
+    
+    setProfile(prev => {
+      const newProfile = prev ? { ...prev, ...updates } : null;
+      // If language changed, clear and re-fetch recommendation
+      if (updates.language && updates.language !== prev?.language && newProfile) {
+        setDailyRecommendation(null);
+        fetchDailyRecommendation(newProfile.focusAreas, updates.language);
+      }
+      return newProfile;
+    });
+  };
 
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
     if (!user) return;
@@ -169,7 +201,7 @@ const App: React.FC = () => {
         narrative: newProfile.narrative,
         has_completed_onboarding: true,
         theme_color: '#06b6d4',
-        language: 'en'
+        language: newProfile.language || 'en'
       });
       
       if (pErr) throw pErr;
@@ -311,19 +343,6 @@ const App: React.FC = () => {
       setIsAnalyzing(false);
       dismissToast(toastId);
     }
-  };
-
-  const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
-    if (!user) return;
-    const dbUpdates: any = {};
-    if (updates.name) dbUpdates.name = updates.name;
-    if (updates.themeColor) dbUpdates.theme_color = updates.themeColor;
-    if (updates.language) dbUpdates.language = updates.language;
-    if (updates.identityStatement) dbUpdates.identity_statement = updates.identityStatement;
-    
-    const { error } = await supabase.from('user_profiles').update(dbUpdates).eq('id', user.id);
-    if (error) throw error;
-    setProfile(prev => prev ? { ...prev, ...updates } : null);
   };
 
   const filteredHabits = habits.filter(h => {

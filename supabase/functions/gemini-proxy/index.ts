@@ -10,6 +10,18 @@ const corsHeaders = {
 
 const ALLOWED_CATEGORIES = ['Health', 'Mindset', 'Productivity', 'Finance', 'Social'];
 
+const getLanguageName = (code: string) => {
+  const langs: Record<string, string> = {
+    'es': 'Spanish',
+    'en': 'English',
+    'pt': 'Portuguese',
+    'ru': 'Russian',
+    'hi': 'Hindi',
+    'zh': 'Chinese'
+  };
+  return langs[code] || 'English';
+};
+
 serve(async (req: any) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -22,7 +34,6 @@ serve(async (req: any) => {
     // @ts-ignore
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
-      console.error("[gemini-proxy] GEMINI_API_KEY is not set in environment variables.");
       return new Response(JSON.stringify({ error: "GEMINI_API_KEY not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -30,16 +41,22 @@ serve(async (req: any) => {
     }
 
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const langCode = payload.language || 'en';
+    const langName = getLanguageName(langCode);
 
     let result;
     switch (action) {
       case 'getDailyInspiration':
         try {
-          const lang = payload.language || 'en';
           result = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: `Give me a daily motivational quote and a small actionable "atomic habit" step based on James Clear's principles for someone focusing on ${payload.userFocus}. 
-            CRITICAL: Return the response in JSON format and use the language: ${lang}.`,
+            contents: `Generate a daily motivational quote and a small actionable "atomic habit" step based on James Clear's principles for someone focusing on ${payload.userFocus}. 
+            
+            LANGUAGE RULES (NON-NEGOTIABLE):
+            - You MUST return the response entirely in ${langName}.
+            - The 'quote' and 'actionStep' MUST be in ${langName}.
+            - Do NOT return English text if the language is not English.
+            - Return the response in JSON format.`,
             config: {
               responseMimeType: "application/json",
               responseSchema: {
@@ -55,38 +72,36 @@ serve(async (req: any) => {
           });
           result = JSON.parse(result.text || '{}');
         } catch (geminiError) {
-          console.error("[gemini-proxy] Error in getDailyInspiration Gemini call:", geminiError);
+          console.error("[gemini-proxy] Error in getDailyInspiration:", geminiError);
           throw geminiError;
         }
         break;
 
       case 'analyzeHabitProgress':
         try {
-          const lang = payload.language || 'en';
           result = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: `Review my current habits and completion data: ${JSON.stringify(payload.habits)}. 
-            Provide a brief, motivating one-sentence insight about my progress or a constructive tip for consistency based on "Atomic Habits" principles. 
-            CRITICAL: Respond in the language: ${lang}.`,
+            contents: `Review these habits: ${JSON.stringify(payload.habits)}. 
+            Provide a brief, motivating one-sentence insight or constructive tip in ${langName}. 
+            CRITICAL: The entire response must be in ${langName}.`,
           });
           result = result.text;
         } catch (geminiError) {
-          console.error("[gemini-proxy] Error in analyzeHabitProgress Gemini call:", geminiError);
+          console.error("[gemini-proxy] Error in analyzeHabitProgress:", geminiError);
           throw geminiError;
         }
         break;
 
       case 'parseRoutineIntoHabits':
-        const parseRoutinePrompt = `Analyze this routine narrative: "${payload.narrative}". 
-          First, identify the language of the narrative.
-          1. Extract a list of atomic habits. For each, identify: name, category (MUST be one of: ${ALLOWED_CATEGORIES.join(', ')}), time (HH:mm if mentioned), description, and daysOfWeek (array 0-6).
-          2. Create a one-sentence "Identity Statement" (e.g. "I am a person who...") based on these actions.
-          Return all habit details and the identity statement in the identified language, in JSON format.`;
-        
         try {
           const geminiResponse = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: parseRoutinePrompt,
+            contents: `Analyze this routine: "${payload.narrative}". 
+            1. Extract habits (name, category: ${ALLOWED_CATEGORIES.join(', ')}, time HH:mm, description, daysOfWeek 0-6).
+            2. Create a one-sentence "Identity Statement" (e.g. "I am a person who...").
+            
+            CRITICAL: The 'name', 'description', and 'identity' MUST be in the same language as the input narrative. 
+            Return JSON.`,
             config: {
               responseMimeType: "application/json",
               responseSchema: {
@@ -112,45 +127,27 @@ serve(async (req: any) => {
               }
             }
           });
-          
           result = JSON.parse(geminiResponse.text || '{}');
         } catch (geminiError) {
-          console.error("[gemini-proxy] Error in parseRoutineIntoHabits Gemini call:", geminiError);
+          console.error("[gemini-proxy] Error in parseRoutineIntoHabits:", geminiError);
           throw geminiError;
         }
         break;
 
       case 'generateSuggestedCards':
-        const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
-        const currentYear = today.getFullYear();
-        
-        const prompt = `User Input: "${payload.logText}". Current Date Context: Today is ${todayStr}.
-        Task: Suggest specific "Atomic Habit" optimizations or NEW scheduled events/habits.
-        First, identify the language of the user input. Then, return all suggested card details (title, description, actionLabel, and habit payload details) in the identified language.
-        
-        CRITICAL SCHEDULING RULES:
-        - If user mentions a specific date like "Feb 5", "tomorrow", or "next Friday", or a specific event, calculate that date precisely for the year ${currentYear}.
-        - For specific events (meetings, visits, appointments) or single-day habits:
-          * ALWAYS set 'isOneTime': true
-          * ALWAYS set 'frequency': 'one-time'
-          * ALWAYS set 'specificDates': ["YYYY-MM-DD"] with the calculated date.
-          * ALWAYS set 'daysOfWeek': [] (empty array).
-          * Set 'type' of suggestedAction to 'create_habit'.
-        - For recurring habits:
-          * set 'isOneTime': false
-          * set 'frequency': 'daily' or 'weekly'
-          * set 'daysOfWeek': [0-6] based on the pattern.
-          * 'specificDates' should be an empty array.
-        
-        Return as JSON array of SuggestedCard. The suggestedAction.type MUST be 'create_habit'.
-        
-        IMPORTANT: For habit categories, ONLY use one of these exact values: ${ALLOWED_CATEGORIES.join(', ')}.`;
-
+        const currentYear = new Date().getFullYear();
         try {
           result = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: prompt,
+            contents: `User Input: "${payload.logText}". 
+            Task: Suggest optimizations or NEW habits. 
+            CRITICAL: Identify the input language and return ALL text (title, description, actionLabel, payload.name) in THAT SAME LANGUAGE.
+            
+            Rules:
+            - Categories: ${ALLOWED_CATEGORIES.join(', ')}.
+            - For specific one-time dates (year ${currentYear}): set frequency 'one-time', isOneTime true, specificDates ["YYYY-MM-DD"].
+            
+            Return JSON array of SuggestedCard.`,
             config: {
               responseMimeType: "application/json",
               responseSchema: {
@@ -166,7 +163,7 @@ serve(async (req: any) => {
                     suggestedAction: {
                       type: Type.OBJECT,
                       properties: {
-                        type: { type: Type.STRING, description: "Must be 'create_habit'" },
+                        type: { type: Type.STRING },
                         payload: { 
                           type: Type.OBJECT,
                           properties: {
@@ -177,9 +174,7 @@ serve(async (req: any) => {
                             specificDates: { type: Type.ARRAY, items: { type: Type.STRING } },
                             isOneTime: { type: Type.BOOLEAN },
                             time: { type: Type.STRING },
-                            description: { type: Type.STRING },
-                            startDate: { type: Type.STRING },
-                            endDate: { type: Type.STRING }
+                            description: { type: Type.STRING }
                           },
                           required: ["name", "category"]
                         }
@@ -194,7 +189,7 @@ serve(async (req: any) => {
           });
           result = JSON.parse(result.text || '[]');
         } catch (geminiError) {
-          console.error("[gemini-proxy] Error in generateSuggestedCards Gemini call:", geminiError);
+          console.error("[gemini-proxy] Error in generateSuggestedCards:", geminiError);
           throw geminiError;
         }
         break;
@@ -212,7 +207,7 @@ serve(async (req: any) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: (error as Error).message || "An unknown error occurred." }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
