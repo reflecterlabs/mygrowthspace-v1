@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { UserProfile, Habit } from '../types';
 import { 
@@ -8,7 +10,6 @@ import {
   Check, 
   Loader2, 
   ArrowRight,
-  Plus,
   Trash2
 } from 'lucide-react';
 import { parseRoutineIntoHabits } from '../services/geminiService';
@@ -34,10 +35,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   });
   const [suggestedHabits, setSuggestedHabits] = useState<Partial<Habit>[]>([]);
 
-  const t = (key: any) => getTranslation(profile.language, key);
-
-  const totalSteps = 4;
-  const progress = (step / totalSteps) * 100;
+  // Use browser language as initial guess for translations
+  const browserLang = navigator.language.split('-')[0];
+  const t = (key: any) => getTranslation(profile.language || browserLang, key);
 
   const handleNext = () => setStep(s => s + 1);
 
@@ -55,8 +55,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setLoading(true);
     try {
       const result = await parseRoutineIntoHabits(profile.narrative);
-      setSuggestedHabits(result.habits.map(h => ({ ...h, startDate: new Date().toISOString().split('T')[0] })));
-      setProfile(prev => ({ ...prev, identityStatement: result.identity }));
+      setSuggestedHabits(result.habits.map((h: any) => ({ ...h, startDate: new Date().toISOString().split('T')[0] })));
+      setProfile(prev => ({ 
+        ...prev, 
+        identityStatement: result.identity,
+        language: result.detectedLanguage || prev.language || browserLang 
+      }));
       setStep(4);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -88,44 +92,23 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   return (
     <div className="fixed inset-0 bg-[#0a0a0c] z-[100] flex flex-col items-center p-0 overflow-y-auto">
       <div className="fixed top-0 left-0 w-full h-1.5 bg-white/5 z-[110]">
-        <div className="h-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,1)] transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+        <div className="h-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,1)] transition-all duration-500 ease-out" style={{ width: `${(step / 4) * 100}%` }} />
       </div>
 
       <div className="max-w-md w-full flex flex-col min-h-full pb-10">
-        
         {step === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-12 animate-in duration-700 relative">
             <div className="absolute inset-0 opacity-20 bg-gradient-to-b from-orange-600/20 via-transparent to-cyan-500/20 pointer-events-none"></div>
-            
             <div className="w-24 h-24 bg-white/5 border border-white/10 rounded-[2.5rem] shadow-2xl flex items-center justify-center text-cyan-400 relative z-10">
               <Dumbbell size={48} className="drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
             </div>
-
             <div className="text-center space-y-4 relative z-10">
               <h1 className="text-4xl font-black text-white tracking-tighter">{t('appName')}</h1>
               <p className="text-slate-400 text-lg leading-relaxed font-medium">
                 {t('syncIdentity').split('Atomic Discipline')[0]}<span className="text-cyan-400 font-black">Atomic Discipline</span>.
               </p>
             </div>
-
-            <div className="w-full space-y-4 relative z-10">
-              <div className="bg-white/5 p-5 rounded-3xl border border-white/10 flex items-center space-x-4">
-                <div className="text-orange-500"><Target size={24} /></div>
-                <div className="text-sm font-bold text-white">{t('onboardingIdentityMapping')}</div>
-              </div>
-              <div className="bg-white/5 p-5 rounded-3xl border border-white/10 flex items-center space-x-4">
-                <div className="text-cyan-400"><BookOpen size={24} /></div>
-                <div className="text-sm font-bold text-white">{t('onboardingPatternRecognition')}</div>
-              </div>
-            </div>
-
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                handleNext();
-              }}
-              className="w-full bg-white text-black rounded-[2.5rem] py-6 font-black text-xl flex items-center justify-center space-x-3 shadow-2xl hover:scale-[1.02] transition-all active:scale-95 relative z-20"
-            >
+            <button onClick={handleNext} className="w-full bg-white text-black rounded-[2.5rem] py-6 font-black text-xl flex items-center justify-center space-x-3 shadow-2xl hover:scale-[1.02] transition-all active:scale-95 relative z-20">
               <span>{t('onboardingInit')}</span>
               <ArrowRight size={24} />
             </button>
@@ -147,11 +130,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
               onChange={e => setProfile({...profile, name: e.target.value})}
               autoFocus
             />
-            <button 
-              disabled={!profile.name} 
-              onClick={handleNext} 
-              className="w-full bg-cyan-500 text-black rounded-3xl py-5 font-black shadow-lg disabled:opacity-20 relative z-20"
-            >
+            <button disabled={!profile.name} onClick={handleNext} className="w-full bg-cyan-500 text-black rounded-3xl py-5 font-black shadow-lg disabled:opacity-20 relative z-20">
               {t('confirm')}
             </button>
           </div>
@@ -172,11 +151,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 </button>
               ))}
             </div>
-            <button 
-              disabled={profile.focusAreas.length === 0} 
-              onClick={handleNext} 
-              className="w-full bg-cyan-500 text-black rounded-3xl py-5 font-black shadow-lg relative z-20"
-            >
+            <button disabled={profile.focusAreas.length === 0} onClick={handleNext} className="w-full bg-cyan-500 text-black rounded-3xl py-5 font-black shadow-lg relative z-20">
               {t('confirm')}
             </button>
           </div>
@@ -226,7 +201,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                   </div>
                 </div>
               ))}
-              <button onClick={() => setSuggestedHabits([...suggestedHabits, { name: 'New Node', category: 'Mindset', daysOfWeek: [1,2,3,4,5], time: '08:00' }])} className="w-full py-6 border-2 border-dashed border-white/10 rounded-[2.5rem] text-slate-500 font-black flex items-center justify-center space-x-2 bg-white/5"><Plus size={18} /><span>{t('onboardingAddNode')}</span></button>
             </div>
             <div className="pt-8 sticky bottom-0 bg-[#0a0a0c] pb-8">
               <button onClick={finalizeOnboarding} className="w-full bg-cyan-500 text-black rounded-[2.5rem] py-6 font-black text-xl flex items-center justify-center space-x-3 shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all active:scale-95 relative z-20">

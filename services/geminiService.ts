@@ -51,7 +51,7 @@ export const analyzeHabitProgress = async (habits: Habit[], language: string = '
   }
 };
 
-export const parseRoutineIntoHabits = async (narrative: string): Promise<{ habits: Partial<Habit>[], identity: string }> => {
+export const parseRoutineIntoHabits = async (narrative: string): Promise<{ habits: Partial<Habit>[], identity: string, detectedLanguage?: string }> => {
   try {
     const result = await invokeGeminiProxy('parseRoutineIntoHabits', { narrative });
     return result;

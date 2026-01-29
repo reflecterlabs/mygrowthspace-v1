@@ -74,9 +74,11 @@ const App: React.FC = () => {
 
   const supabase = useMemo(() => createClerkSupabaseClient(getToken), [getToken]);
 
-  const t = (key: any) => getTranslation(profile?.language, key);
+  // Use browser language as initial fallback
+  const browserLang = navigator.language.split('-')[0];
+  const currentLanguage = profile?.language || browserLang;
+  const t = (key: any) => getTranslation(currentLanguage, key);
 
-  // Fetch recommendation logic
   const fetchDailyRecommendation = async (focusAreas: string[], lang: string) => {
     const focus = focusAreas?.join(', ') || 'personal growth';
     try {
@@ -98,14 +100,8 @@ const App: React.FC = () => {
       setProfileStatus('loading');
       try {
         const token = await getToken();
-        if (!token) {
-          showError("Could not retrieve session token.");
-          setProfileStatus('error');
-          return;
-        }
+        if (!token) return;
 
-        await (supabase as any).realtime.setAuth(token);
-        
         const { data: profileData, error: pError } = await supabase
           .from('user_profiles')
           .select('*')
@@ -113,7 +109,6 @@ const App: React.FC = () => {
           .maybeSingle();
 
         if (pError) {
-          console.error("Profile fetch error:", pError);
           setProfileStatus('error');
           return;
         }
@@ -121,6 +116,7 @@ const App: React.FC = () => {
         if (!profileData || !profileData.has_completed_onboarding) {
           setProfileStatus('onboarding');
         } else {
+          const userLang = profileData.language || browserLang;
           const currentProfile: UserProfile = {
             name: profileData.name,
             email: profileData.email,
@@ -129,7 +125,7 @@ const App: React.FC = () => {
             focusAreas: profileData.focus_areas,
             narrative: profileData.narrative,
             themeColor: profileData.theme_color || '#06b6d4',
-            language: profileData.language || 'en'
+            language: userLang
           };
           setProfile(currentProfile);
 
@@ -153,19 +149,17 @@ const App: React.FC = () => {
           })));
           setProfileStatus('ready');
 
-          // Initial fetch for recommendation
           if (!dailyRecommendation) {
-            fetchDailyRecommendation(currentProfile.focusAreas, currentProfile.language || 'en');
+            fetchDailyRecommendation(currentProfile.focusAreas, userLang);
           }
         }
       } catch (e) {
-        console.error("Session init error:", e);
         setProfileStatus('error');
       }
     };
 
     initSession();
-  }, [isLoaded, isSignedIn, user, refreshTrigger, getToken, supabase]);
+  }, [isLoaded, isSignedIn, user, refreshTrigger, getToken, supabase, browserLang]);
 
   const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return;
@@ -175,8 +169,7 @@ const App: React.FC = () => {
     if (updates.language) dbUpdates.language = updates.language;
     if (updates.identityStatement) dbUpdates.identity_statement = updates.identityStatement;
     
-    const { error } = await supabase.from('user_profiles').update(dbUpdates).eq('id', user.id);
-    if (error) throw error;
+    await supabase.from('user_profiles').update(dbUpdates).eq('id', user.id);
     
     setProfile(prev => {
       const newProfile = prev ? { ...prev, ...updates } : null;
@@ -193,7 +186,8 @@ const App: React.FC = () => {
     const toastId = showLoading(t('toastActivatingProtocols'));
     const todayStr = new Date().toISOString().split('T')[0];
     try {
-      const { error: pErr } = await supabase.from('user_profiles').upsert({
+      const finalLang = newProfile.language || browserLang;
+      await supabase.from('user_profiles').upsert({
         id: user.id, 
         name: newProfile.name,
         email: user.emailAddresses[0].emailAddress,
@@ -202,11 +196,9 @@ const App: React.FC = () => {
         narrative: newProfile.narrative,
         has_completed_onboarding: true,
         theme_color: '#06b6d4',
-        language: newProfile.language || 'en'
+        language: finalLang
       });
       
-      if (pErr) throw pErr;
-
       if (newHabits.length > 0) {
         const habitsToInsert = newHabits.map(h => ({
           user_id: user.id,
@@ -218,8 +210,7 @@ const App: React.FC = () => {
           is_one_time: h.isOneTime,
           start_date: todayStr
         }));
-        const { error: hErr } = await supabase.from('habits').insert(habitsToInsert);
-        if (hErr) throw hErr;
+        await supabase.from('habits').insert(habitsToInsert);
       }
       
       showSuccess(t('toastOnboardingComplete'));
@@ -251,15 +242,10 @@ const App: React.FC = () => {
 
   const confirmDeleteHabit = async (habitId: string) => {
     if (!user) return;
-    try {
-      const { error } = await supabase.from('habits').delete().eq('id', habitId).eq('user_id', user.id);
-      if (error) throw error;
-      setHabits(prev => prev.filter(h => h.id !== habitId));
-      showSuccess(t('toastProtocolTerminated'));
-      setDeleteConfirmation(null);
-    } catch (e) {
-      showError('Failed to delete');
-    }
+    await supabase.from('habits').delete().eq('id', habitId).eq('user_id', user.id);
+    setHabits(prev => prev.filter(h => h.id !== habitId));
+    showSuccess(t('toastProtocolTerminated'));
+    setDeleteConfirmation(null);
   };
 
   const saveHabit = async (data: Partial<Habit>, suggestionId?: string) => {
@@ -294,41 +280,27 @@ const App: React.FC = () => {
       }]);
       showSuccess(t('toastHabitDeployed'));
       setIsModalOpen(false);
-      
-      if (suggestionId) {
-        setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId));
-      }
+      if (suggestionId) setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId));
     }
   };
 
   const updateExistingHabit = async (updates: Partial<Habit>) => {
     if (!editingHabit || !user) return;
-    try {
-      const { error } = await supabase.from('habits').update({
-        name: updates.name,
-        category: updates.category,
-        time_of_day: updates.time
-      }).eq('id', editingHabit.id).eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setHabits(prev => prev.map(h => h.id === editingHabit.id ? { ...h, ...updates } : h));
-      showSuccess(t('toastProtocolUpdated'));
-      setIsEditModalOpen(false);
-      setEditingHabit(null);
-    } catch (e) {
-      showError('Update failed');
-    }
+    await supabase.from('habits').update({
+      name: updates.name,
+      category: updates.category,
+      time_of_day: updates.time
+    }).eq('id', editingHabit.id).eq('user_id', user.id);
+    setHabits(prev => prev.map(h => h.id === editingHabit.id ? { ...h, ...updates } : h));
+    showSuccess(t('toastProtocolUpdated'));
+    setIsEditModalOpen(false);
+    setEditingHabit(null);
   };
 
   const handleUpdateIdentity = async (newStatement: string) => {
     if (!user) return;
-    try {
-      await handleUpdateProfile({ identityStatement: newStatement });
-      showSuccess("Identity manifestation updated.");
-    } catch (e) {
-      showError("Failed to update identity.");
-    }
+    await handleUpdateProfile({ identityStatement: newStatement });
+    showSuccess("Identity manifestation updated.");
   };
 
   const handleAnalyzeRoutine = async (text: string) => {
@@ -348,16 +320,8 @@ const App: React.FC = () => {
 
   const handleSendFeedback = async (content: string) => {
     if (!user) return;
-    try {
-      const { error } = await supabase.from('feedback').insert({
-        user_id: user.id,
-        content
-      });
-      if (error) throw error;
-      showSuccess("Feedback enviado, ¡gracias!");
-    } catch (e) {
-      showError("No se pudo enviar el feedback");
-    }
+    await supabase.from('feedback').insert({ user_id: user.id, content });
+    showSuccess("Feedback enviado, ¡gracias!");
   };
 
   const filteredHabits = habits.filter(h => {
@@ -375,11 +339,6 @@ const App: React.FC = () => {
       card: 'bg-[#0a0a0c] border border-white/10 rounded-[2.5rem] shadow-2xl',
       headerTitle: 'text-white font-black tracking-tighter text-2xl',
       headerSubtitle: 'text-slate-500 font-bold uppercase tracking-widest text-[10px]',
-      socialButtonsBlockButton: 'bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors',
-      formFieldLabel: 'text-[10px] font-black text-slate-500 uppercase tracking-widest',
-      formFieldInput: 'bg-white/5 border border-white/5 rounded-2xl p-4 text-white outline-none focus:border-primary-500 transition-all',
-      footerActionText: 'text-slate-500 font-bold',
-      footerActionLink: 'text-primary-500 font-black hover:text-primary-400',
     }
   };
 
@@ -407,71 +366,44 @@ const App: React.FC = () => {
                 <h2 className="text-2xl font-black tracking-tight">{profile?.name}</h2>
               </div>
               <div className="flex items-center gap-3 relative">
-                <button 
-                  onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}
-                  className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors text-slate-400 hover:text-primary-500"
-                >
+                <button onClick={() => setIsFeedbackOpen(!isFeedbackOpen)} className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors text-slate-400 hover:text-primary-500">
                   <MessageSquare size={20} />
                 </button>
                 <button onClick={() => setIsProfileModalOpen(true)} className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors"><UserIcon size={20} className="text-primary-500" /></button>
-                
-                <FeedbackBubble 
-                  isOpen={isFeedbackOpen} 
-                  onClose={() => setIsFeedbackOpen(false)} 
-                  onSubmit={handleSendFeedback}
-                  language={profile?.language}
-                />
+                <FeedbackBubble isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} onSubmit={handleSendFeedback} language={currentLanguage} />
               </div>
             </nav>
 
             {currentView === 'home' ? (
               <main className="p-6 space-y-4 animate-in fade-in duration-500">
-                <ManifestHeader statement={profile?.identityStatement || ''} onUpdate={handleUpdateIdentity} language={profile?.language} />
-                
+                <ManifestHeader statement={profile?.identityStatement || ''} onUpdate={handleUpdateIdentity} language={currentLanguage} />
                 {showDailyRecommendation && dailyRecommendation && (
-                  <DailyRecommendation 
-                    recommendation={dailyRecommendation} 
-                    onDismiss={() => setShowDailyRecommendation(false)} 
-                    language={profile?.language}
-                  />
+                  <DailyRecommendation recommendation={dailyRecommendation} onDismiss={() => setShowDailyRecommendation(false)} language={currentLanguage} />
                 )}
-
                 <DateCarousel selectedDate={selectedDate} onDateChange={setSelectedDate} />
-                <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} language={profile?.language} />
-                
+                <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} language={currentLanguage} />
                 {aiSuggestions.map(s => (
-                  <InsightCard key={s.id} suggestion={s} onAccept={(h) => saveHabit(h, s.id)} onReject={() => setAiSuggestions(prev => prev.filter(x => x.id !== s.id))} language={profile?.language} />
+                  <InsightCard key={s.id} suggestion={s} onAccept={(h) => saveHabit(h, s.id)} onReject={() => setAiSuggestions(prev => prev.filter(x => x.id !== s.id))} language={currentLanguage} />
                 ))}
-
                 <div className="grid gap-3 pt-4">
                   {filteredHabits.map(h => (
-                    <HabitCard 
-                      key={h.id} 
-                      habit={h} 
-                      selectedDateStr={selectedDate} 
-                      onToggle={toggleHabit} 
-                      onDelete={(id) => setDeleteConfirmation(id)} 
-                      onEdit={(habit) => { setEditingHabit(habit); setIsEditModalOpen(true); }} 
-                      language={profile?.language}
-                    />
+                    <HabitCard key={h.id} habit={h} selectedDateStr={selectedDate} onToggle={toggleHabit} onDelete={(id) => setDeleteConfirmation(id)} onEdit={(habit) => { setEditingHabit(habit); setIsEditModalOpen(true); }} language={currentLanguage} />
                   ))}
                   {filteredHabits.length === 0 && <div className="text-center p-16 border-2 border-dashed border-white/5 rounded-[3rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">No active protocols for this date.</div>}
                 </div>
               </main>
             ) : (
-              <main className="animate-in fade-in duration-500"><InsightsPage habits={habits} language={profile?.language} /></main>
+              <main className="animate-in fade-in duration-500"><InsightsPage habits={habits} language={currentLanguage} /></main>
             )}
 
-            <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} language={profile?.language} />
-
+            <RoutineInput onAnalyze={handleAnalyzeRoutine} isLoading={isAnalyzing} language={currentLanguage} />
             <BottomNavBar currentView={currentView} onHomeClick={() => setCurrentView('home')} onInsightsClick={() => setCurrentView('insights')} onAddHabitClick={() => setIsModalOpen(true)} />
-            
-            <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} language={profile?.language} />
-            <EditHabitModal isOpen={isEditModalOpen} habit={editingHabit} onClose={() => { setIsEditModalOpen(false); setEditingHabit(null); }} onSave={updateExistingHabit} language={profile?.language} />
+            <AddHabitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={saveHabit} language={currentLanguage} />
+            <EditHabitModal isOpen={isEditModalOpen} habit={editingHabit} onClose={() => { setIsEditModalOpen(false); setEditingHabit(null); }} onSave={updateExistingHabit} language={currentLanguage} />
             
             {deleteConfirmation && (
-              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-sm w-full text-center shadow-2xl">
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="bg-[#0a0a0c] border border-white/10 rounded-3xl p-8 max-sm w-full text-center">
                   <AlertCircle size={40} className="text-red-500 mx-auto mb-4" />
                   <h3 className="text-xl font-black text-white mb-2">{t('deleteHabitTitle')}</h3>
                   <p className="text-slate-400 text-xs mb-8">{t('deleteHabitDesc')}</p>

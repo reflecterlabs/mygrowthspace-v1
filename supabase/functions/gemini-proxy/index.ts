@@ -29,7 +29,7 @@ serve(async (req: any) => {
 
   try {
     const { action, payload } = await req.json();
-    console.log("[gemini-proxy] Received action:", action, "with payload:", payload);
+    console.log("[gemini-proxy] Received action:", action);
 
     // @ts-ignore
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -43,21 +43,24 @@ serve(async (req: any) => {
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
     const langCode = payload.language || 'en';
     const langName = getLanguageName(langCode);
+    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     let result;
     switch (action) {
       case 'getDailyInspiration':
         try {
-          result = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Generate a daily motivational quote and a small actionable "atomic habit" step based on James Clear's principles for someone focusing on ${payload.userFocus}. 
-            
-            LANGUAGE RULES (NON-NEGOTIABLE):
-            - You MUST return the response entirely in ${langName}.
-            - The 'quote' and 'actionStep' MUST be in ${langName}.
-            - Do NOT return English text if the language is not English.
-            - Return the response in JSON format.`,
-            config: {
+          const prompt = `LANGUAGE INSTRUCTION: You MUST speak in ${langName} (${langCode}).
+          
+          Generate a daily motivational quote and a small actionable "atomic habit" step based on James Clear's principles for someone focusing on ${payload.userFocus}. 
+          
+          RULES:
+          - Return only JSON.
+          - The fields 'quote' and 'actionStep' MUST be in ${langName}.
+          - Do NOT use English if the requested language is ${langName}.`;
+
+          const genResult = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
               responseMimeType: "application/json",
               responseSchema: {
                 type: Type.OBJECT,
@@ -70,135 +73,106 @@ serve(async (req: any) => {
               }
             }
           });
-          result = JSON.parse(result.text || '{}');
-        } catch (geminiError) {
-          console.error("[gemini-proxy] Error in getDailyInspiration:", geminiError);
-          throw geminiError;
+          result = JSON.parse(genResult.response.text() || '{}');
+        } catch (e) {
+          console.error("[gemini-proxy] Error:", e);
+          throw e;
         }
         break;
 
       case 'analyzeHabitProgress':
-        try {
-          result = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Review these habits: ${JSON.stringify(payload.habits)}. 
-            Provide a brief, motivating one-sentence insight or constructive tip in ${langName}. 
-            CRITICAL: The entire response must be in ${langName}.`,
-          });
-          result = result.text;
-        } catch (geminiError) {
-          console.error("[gemini-proxy] Error in analyzeHabitProgress:", geminiError);
-          throw geminiError;
-        }
+        const analysisPrompt = `Analyze these habits: ${JSON.stringify(payload.habits)}. 
+        Provide a brief, motivating one-sentence tip.
+        CRITICAL: The entire response MUST be in ${langName}.`;
+        
+        const analysisResult = await model.generateContent(analysisPrompt);
+        result = analysisResult.response.text();
         break;
 
       case 'parseRoutineIntoHabits':
-        try {
-          const geminiResponse = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Analyze this routine: "${payload.narrative}". 
-            1. Extract habits (name, category: ${ALLOWED_CATEGORIES.join(', ')}, time HH:mm, description, daysOfWeek 0-6).
-            2. Create a one-sentence "Identity Statement" (e.g. "I am a person who...").
-            
-            CRITICAL: The 'name', 'description', and 'identity' MUST be in the same language as the input narrative. 
-            Return JSON.`,
-            config: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  habits: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        name: { type: Type.STRING },
-                        category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
-                        time: { type: Type.STRING },
-                        description: { type: Type.STRING },
-                        daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } }
-                      },
-                      required: ["name", "category", "daysOfWeek"]
-                    }
-                  },
-                  identity: { type: Type.STRING }
+        const parsePrompt = `Analyze this routine: "${payload.narrative}". 
+        1. Extract habits (name, category, time HH:mm, description, daysOfWeek 0-6).
+        2. Create an "Identity Statement".
+        3. Detect the language code of the input (e.g. 'es', 'en', 'pt').
+        
+        CRITICAL: All generated content must match the input language.`;
+
+        const parseResult = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: parsePrompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                habits: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: { type: Type.STRING },
+                      category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
+                      time: { type: Type.STRING },
+                      description: { type: Type.STRING },
+                      daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } }
+                    },
+                    required: ["name", "category", "daysOfWeek"]
+                  }
                 },
-                required: ["habits", "identity"]
-              }
+                identity: { type: Type.STRING },
+                detectedLanguage: { type: Type.STRING }
+              },
+              required: ["habits", "identity", "detectedLanguage"]
             }
-          });
-          result = JSON.parse(geminiResponse.text || '{}');
-        } catch (geminiError) {
-          console.error("[gemini-proxy] Error in parseRoutineIntoHabits:", geminiError);
-          throw geminiError;
-        }
+          }
+        });
+        result = JSON.parse(parseResult.response.text() || '{}');
         break;
 
       case 'generateSuggestedCards':
-        const currentYear = new Date().getFullYear();
-        try {
-          result = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `User Input: "${payload.logText}". 
-            Task: Suggest optimizations or NEW habits. 
-            CRITICAL: Identify the input language and return ALL text (title, description, actionLabel, payload.name) in THAT SAME LANGUAGE.
-            
-            Rules:
-            - Categories: ${ALLOWED_CATEGORIES.join(', ')}.
-            - For specific one-time dates (year ${currentYear}): set frequency 'one-time', isOneTime true, specificDates ["YYYY-MM-DD"].
-            
-            Return JSON array of SuggestedCard.`,
-            config: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    id: { type: Type.STRING },
-                    title: { type: Type.STRING },
-                    description: { type: Type.STRING },
-                    type: { type: Type.STRING },
-                    actionLabel: { type: Type.STRING },
-                    suggestedAction: {
-                      type: Type.OBJECT,
-                      properties: {
-                        type: { type: Type.STRING },
-                        payload: { 
-                          type: Type.OBJECT,
-                          properties: {
-                            name: { type: Type.STRING },
-                            category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
-                            frequency: { type: Type.STRING, enum: ['daily', 'weekly', 'one-time'] },
-                            daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } },
-                            specificDates: { type: Type.ARRAY, items: { type: Type.STRING } },
-                            isOneTime: { type: Type.BOOLEAN },
-                            time: { type: Type.STRING },
-                            description: { type: Type.STRING }
-                          },
-                          required: ["name", "category"]
+        const suggestPrompt = `User Input: "${payload.logText}". 
+        Suggest NEW habits or optimizations based on this input.
+        CRITICAL: Return EVERYTHING in the same language as the input.`;
+
+        const suggestResult = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: suggestPrompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  title: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  type: { type: Type.STRING },
+                  actionLabel: { type: Type.STRING },
+                  suggestedAction: {
+                    type: Type.OBJECT,
+                    properties: {
+                      type: { type: Type.STRING },
+                      payload: { 
+                        type: Type.OBJECT,
+                        properties: {
+                          name: { type: Type.STRING },
+                          category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
+                          frequency: { type: Type.STRING },
+                          daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } },
+                          time: { type: Type.STRING }
                         }
-                      },
-                      required: ["type", "payload"]
+                      }
                     }
-                  },
-                  required: ["id", "title", "description", "type", "actionLabel", "suggestedAction"]
+                  }
                 }
               }
             }
-          });
-          result = JSON.parse(result.text || '[]');
-        } catch (geminiError) {
-          console.error("[gemini-proxy] Error in generateSuggestedCards:", geminiError);
-          throw geminiError;
-        }
+          }
+        });
+        result = JSON.parse(suggestResult.response.text() || '[]');
         break;
 
       default:
-        return new Response(JSON.stringify({ error: "Unknown action" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response("Unknown action", { status: 400, headers: corsHeaders });
     }
 
     return new Response(JSON.stringify(result), {
