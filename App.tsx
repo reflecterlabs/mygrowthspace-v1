@@ -22,27 +22,39 @@ import { showSuccess, showError, showLoading, dismissToast } from './src/utils/t
 import { generateSuggestedCards, getDailyInspiration } from './services/geminiService';
 import { getTranslation } from './src/lib/translations';
 
+// Helper para obtener YYYY-MM-DD en hora local real del dispositivo
+const getTodayLocalStr = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const calculateStreak = (_habit: Habit, allCompletedDates: string[]): { streak: number; lastCompletedDate: string | null } => {
   const sortedDates = [...allCompletedDates].sort();
   if (sortedDates.length === 0) return { streak: 0, lastCompletedDate: null };
-  const actualTodayStr = new Date().toISOString().split('T')[0];
+  const actualTodayStr = getTodayLocalStr();
   const relevantDates = sortedDates.filter(d => d <= actualTodayStr);
   if (relevantDates.length === 0) return { streak: 0, lastCompletedDate: null };
 
   let streak = 0;
   let checkDate = new Date();
   checkDate.setHours(0,0,0,0);
-  const todayStr = checkDate.toISOString().split('T')[0];
-  checkDate.setDate(checkDate.getDate() - 1);
-  const yesterdayStr = checkDate.toISOString().split('T')[0];
+  const todayStr = getTodayLocalStr();
+  
+  // Ayer en local
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = `${yesterday.getFullYear()}-${(yesterday.getMonth()+1).toString().padStart(2,'0')}-${yesterday.getDate().toString().padStart(2,'0')}`;
 
   if (!relevantDates.includes(todayStr) && !relevantDates.includes(yesterdayStr)) {
     return { streak: 0, lastCompletedDate: relevantDates[relevantDates.length-1] };
   }
 
-  let iterDate = relevantDates.includes(todayStr) ? new Date() : checkDate;
+  let iterDate = relevantDates.includes(todayStr) ? new Date() : yesterday;
   while(true) {
-    const dStr = iterDate.toISOString().split('T')[0];
+    const dStr = `${iterDate.getFullYear()}-${(iterDate.getMonth()+1).toString().padStart(2,'0')}-${iterDate.getDate().toString().padStart(2,'0')}`;
     if (relevantDates.includes(dStr)) {
       streak++;
       iterDate.setDate(iterDate.getDate() - 1);
@@ -60,7 +72,7 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayLocalStr());
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -74,7 +86,6 @@ const App: React.FC = () => {
 
   const supabase = useMemo(() => createClerkSupabaseClient(getToken), [getToken]);
 
-  // Use browser language as initial fallback
   const browserLang = navigator.language.split('-')[0];
   const currentLanguage = profile?.language || browserLang;
   const t = (key: any) => getTranslation(currentLanguage, key);
@@ -184,7 +195,7 @@ const App: React.FC = () => {
   const handleOnboardingComplete = async (newProfile: UserProfile, newHabits: Habit[]) => {
     if (!user) return;
     const toastId = showLoading(t('toastActivatingProtocols'));
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayLocalStr();
     try {
       const finalLang = newProfile.language || browserLang;
       await supabase.from('user_profiles').upsert({
@@ -221,7 +232,9 @@ const App: React.FC = () => {
   };
 
   const toggleHabit = async (habitId: string, date: string) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayLocalStr();
+    
+    // Comparación basada en fecha local sin horas
     if (date < todayStr) {
       showError("Consistency is maintained in the present. Past logs are locked.");
       return;
@@ -232,7 +245,9 @@ const App: React.FC = () => {
     const isDone = habit.completedDates.includes(date);
     const newDates = isDone ? habit.completedDates.filter(d => d !== date) : [...habit.completedDates, date];
     const { streak, lastCompletedDate } = calculateStreak(habit, newDates);
+    
     setHabits(prev => prev.map(h => h.id === habitId ? { ...h, completedDates: newDates, streak, lastCompletedDate } : h));
+    
     await supabase.from('habits').update({
       completed_dates: newDates,
       streak,
@@ -250,7 +265,7 @@ const App: React.FC = () => {
 
   const saveHabit = async (data: Partial<Habit>, suggestionId?: string) => {
     if (!user) return;
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayLocalStr();
     const { data: newH } = await supabase.from('habits').insert({
       user_id: user.id,
       name: data.name,
