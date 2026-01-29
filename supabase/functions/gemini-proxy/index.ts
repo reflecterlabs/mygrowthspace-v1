@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const ALLOWED_CATEGORIES = ['Health', 'Mindset', 'Productivity', 'Finance', 'Social']; // Definir categorías permitidas
+const ALLOWED_CATEGORIES = ['Health', 'Mindset', 'Productivity', 'Finance', 'Social'];
 
 serve(async (req: any) => {
   if (req.method === 'OPTIONS') {
@@ -35,9 +35,11 @@ serve(async (req: any) => {
     switch (action) {
       case 'getDailyInspiration':
         try {
+          const lang = payload.language || 'en';
           result = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: `Give me a daily motivational quote and a small actionable "atomic habit" step based on James Clear's principles for someone focusing on ${payload.userFocus}. Return it in JSON format in English.`,
+            contents: `Give me a daily motivational quote and a small actionable "atomic habit" step based on James Clear's principles for someone focusing on ${payload.userFocus}. 
+            CRITICAL: Return the response in JSON format and use the language: ${lang}.`,
             config: {
               responseMimeType: "application/json",
               responseSchema: {
@@ -54,16 +56,18 @@ serve(async (req: any) => {
           result = JSON.parse(result.text || '{}');
         } catch (geminiError) {
           console.error("[gemini-proxy] Error in getDailyInspiration Gemini call:", geminiError);
-          throw geminiError; // Re-throw to be caught by outer try-catch
+          throw geminiError;
         }
         break;
 
       case 'analyzeHabitProgress':
         try {
+          const lang = payload.language || 'en';
           result = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: `Review my current habits and completion data: ${JSON.stringify(payload.habits)}. 
-            Provide a brief, motivating one-sentence insight about my progress or a constructive tip for consistency based on "Atomic Habits" principles. MUST BE IN ENGLISH.`,
+            Provide a brief, motivating one-sentence insight about my progress or a constructive tip for consistency based on "Atomic Habits" principles. 
+            CRITICAL: Respond in the language: ${lang}.`,
           });
           result = result.text;
         } catch (geminiError) {
@@ -79,15 +83,13 @@ serve(async (req: any) => {
           2. Create a one-sentence "Identity Statement" (e.g. "I am a person who...") based on these actions.
           Return all habit details and the identity statement in the identified language, in JSON format.`;
         
-        console.log("[gemini-proxy] Sending prompt to Gemini for parseRoutineIntoHabits:", parseRoutinePrompt);
-
         try {
           const geminiResponse = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: parseRoutinePrompt,
             config: {
               responseMimeType: "application/json",
-              responseSchema: { // Restaurado el responseSchema
+              responseSchema: {
                 type: Type.OBJECT,
                 properties: {
                   habits: {
@@ -111,19 +113,10 @@ serve(async (req: any) => {
             }
           });
           
-          const rawGeminiText = geminiResponse.text;
-          console.log("[gemini-proxy] Raw Gemini response for parseRoutineIntoHabits:", rawGeminiText);
-
-          try {
-            result = JSON.parse(rawGeminiText || '{}');
-            console.log("[gemini-proxy] Parsed Gemini response for parseRoutineIntoHabits:", result);
-          } catch (jsonError) {
-            console.error("[gemini-proxy] JSON parsing error for parseRoutineIntoHabits:", jsonError);
-            result = { habits: [], identity: "I am forging my new self." }; // Fallback
-          }
+          result = JSON.parse(geminiResponse.text || '{}');
         } catch (geminiError) {
           console.error("[gemini-proxy] Error in parseRoutineIntoHabits Gemini call:", geminiError);
-          throw geminiError; // Re-throw to be caught by outer try-catch
+          throw geminiError;
         }
         break;
 
@@ -179,7 +172,7 @@ serve(async (req: any) => {
                           properties: {
                             name: { type: Type.STRING },
                             category: { type: Type.STRING, enum: ALLOWED_CATEGORIES },
-                            frequency: { type: Type.STRING, enum: ['daily', 'weekly', 'one-time'] }, // <--- Modificado aquí
+                            frequency: { type: Type.STRING, enum: ['daily', 'weekly', 'one-time'] },
                             daysOfWeek: { type: Type.ARRAY, items: { type: Type.INTEGER } },
                             specificDates: { type: Type.ARRAY, items: { type: Type.STRING } },
                             isOneTime: { type: Type.BOOLEAN },
@@ -207,7 +200,6 @@ serve(async (req: any) => {
         break;
 
       default:
-        console.warn("[gemini-proxy] Unknown action:", action);
         return new Response(JSON.stringify({ error: "Unknown action" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -220,8 +212,7 @@ serve(async (req: any) => {
     });
 
   } catch (error) {
-    console.error("[gemini-proxy] General error processing request:", (error as Error).message, error); // Log full error object
-    return new Response(JSON.stringify({ error: (error as Error).message || "An unknown error occurred in the proxy function." }), {
+    return new Response(JSON.stringify({ error: (error as Error).message || "An unknown error occurred." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

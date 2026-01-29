@@ -138,10 +138,10 @@ const App: React.FC = () => {
           })));
           setProfileStatus('ready');
 
-          // Fetch daily recommendation once per app entry
+          // Fetch daily recommendation once per app entry with user language
           if (!dailyRecommendation) {
             const focus = profileData.focus_areas?.join(', ') || 'personal growth';
-            const tip = await getDailyInspiration(focus);
+            const tip = await getDailyInspiration(focus, profileData.language || 'en');
             setDailyRecommendation(tip);
             setShowDailyRecommendation(true);
           }
@@ -262,7 +262,6 @@ const App: React.FC = () => {
       showSuccess(t('toastHabitDeployed'));
       setIsModalOpen(false);
       
-      // Clear suggestion if synced from one
       if (suggestionId) {
         setAiSuggestions(prev => prev.filter(s => s.id !== suggestionId));
       }
